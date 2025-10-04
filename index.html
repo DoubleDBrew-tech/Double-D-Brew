@@ -78,6 +78,34 @@
       document.getElementById("username").value = "";
       document.getElementById("password").value = "";
     }
+    // Check login status on page load
+document.addEventListener("DOMContentLoaded", () => {
+  const loggedIn = localStorage.getItem("loggedIn");
+  if (loggedIn === "true") {
+    showInventoryPage();
+  } else {
+    showLoginPage();
+  }
+});
+
+// Login function
+function login() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  if (username === "admin" && password === "password123") {
+    localStorage.setItem("loggedIn", "true");
+    showInventoryPage();
+  } else {
+    alert("Invalid username or password");
+  }
+}
+
+// Logout function
+function logout() {
+  localStorage.removeItem("loggedIn");
+  showLoginPage();
+}3
 
     // ---------- INVENTORY DATA ----------
     let products = JSON.parse(localStorage.getItem("products") || "[]");
@@ -274,18 +302,86 @@
     }
 
     // ---------- Export CSV ----------
-    function exportCSV() {
-      let csv = "SKU,Name,Description,Stock,Price,Threshold\\n";
-      products.forEach(p => {
-        csv += `${p.sku},${p.name},${p.description},${p.stock},${p.price},${p.reorder_threshold}\\n`;
-      });
+// Keep a global object to track previous stock
+let previousStocks = {};
 
-      let blob = new Blob([csv], { type: "text/csv" });
-      let a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "inventory.csv";
-      a.click();
-    }
+function exportCSV() {
+  // Add timestamp
+  let now = new Date();
+  let timestamp = now.toLocaleString();
+
+  // CSV headers
+  let csv = "Timestamp,SKU,Name,Description,Previous Stock,Current Stock,Price,Threshold\n";
+
+  products.forEach(p => {
+    let prevStock = previousStocks[p.sku] !== undefined ? previousStocks[p.sku] : p.stock;
+
+    // Add row
+    csv += `${timestamp},${p.sku},${p.name},${p.description},${prevStock},${p.stock},${p.price},${p.reorder_threshold}\n`;
+
+    // Update previous stock for next export
+    previousStocks[p.sku] = p.stock;
+  });
+
+  // Download CSV
+  let blob = new Blob([csv], { type: "text/csv" });
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "inventory.csv";
+  a.click();
+}
+
   </script>
+  <script type="module">
+  // Import Firebase functions
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } 
+    from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
+    authDomain: "doubledbrew-569cd.firebaseapp.com",
+    projectId: "doubledbrew-569cd",
+    storageBucket: "doubledbrew-569cd.appspot.com",
+    messagingSenderId: "28995576921",
+    appId: "1:28995576921:web:597ac212cce2eb7066fd48"
+  };
+
+  // Initialize Firebase and Firestore
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Example: load products from Firestore
+  async function loadProducts() {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    products = [];
+    querySnapshot.forEach((doc) => {
+      products.push({ id: doc.id, ...doc.data() });
+    });
+    showDashboard();
+  }
+
+  // Example: save a new product to Firestore
+  async function saveNewProduct(e) {
+    e.preventDefault();
+    let form = e.target;
+    let newP = {
+      sku: form.sku.value,
+      name: form.name.value,
+      description: form.description.value,
+      price: parseFloat(form.price.value),
+      stock: parseInt(form.stock.value),
+      reorder_threshold: parseInt(form.reorder.value)
+    };
+    await addDoc(collection(db, "products"), newP);
+    loadProducts();
+  }
+
+  // Replace localStorage calls with Firestore later
+  loadProducts();
+</script>
+
 </body>
 </html>
+
