@@ -58,287 +58,101 @@
   </div>
 
   <script>
-    // ---------- LOGIN ----------
-    function login() {
-      const user = document.getElementById("username").value;
-      const pass = document.getElementById("password").value;
-
-      if (user === "admin" && pass === "password123") {
-        document.getElementById("loginForm").style.display = "none";
-        document.getElementById("app").style.display = "block";
-        showDashboard();
-      } else {
-        alert("Invalid username or password!");
-      }
-    }
-
-    function logout() {
-      document.getElementById("app").style.display = "none";
+  // ---------- LOGIN SYSTEM ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    const loggedIn = localStorage.getItem("loggedIn");
+    if (loggedIn === "true") {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      showDashboard();
+    } else {
       document.getElementById("loginForm").style.display = "flex";
-      document.getElementById("username").value = "";
-      document.getElementById("password").value = "";
     }
-    // Check login status on page load
-document.addEventListener("DOMContentLoaded", () => {
-  const loggedIn = localStorage.getItem("loggedIn");
-  if (loggedIn === "true") {
-    showInventoryPage();
-  } else {
-    showLoginPage();
-  }
-});
-
-// Login function
-function login() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  if (username === "admin" && password === "password123") {
-    localStorage.setItem("loggedIn", "true");
-    showInventoryPage();
-  } else {
-    alert("Invalid username or password");
-  }
-}
-
-// Logout function
-function logout() {
-  localStorage.removeItem("loggedIn");
-  showLoginPage();
-}3
-
-    // ---------- INVENTORY DATA ----------
-    let products = JSON.parse(localStorage.getItem("products") || "[]");
-
-    if (products.length === 0) {
-      products = [
-        {id: 1, sku: "DBR-001", name: "Espresso Beans 250g", description: "Dark roast", price: 250.0, stock: 20, reorder_threshold: 5},
-        {id: 2, sku: "DBR-002", name: "Milk (1L)", description: "Fresh milk", price: 80.0, stock: 10, reorder_threshold: 3},
-        {id: 3, sku: "DBR-003", name: "Cup (12oz)", description: "Disposable cup", price: 2.5, stock: 200, reorder_threshold: 50},
-      ];
-      saveProducts();
-    }
-
-    function saveProducts() {
-      localStorage.setItem("products", JSON.stringify(products));
-    }
-
-    // ---------- Dashboard ----------
-    function showDashboard() {
-      let totalItems = products.reduce((sum, p) => sum + p.stock, 0);
-      let totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
-      let lowCount = products.filter(p => p.stock <= p.reorder_threshold).length;
-
-      let tableRows = products.map(p => `
-        <tr>
-          <td>${p.sku}</td>
-          <td>${p.name}</td>
-          <td>${p.stock}</td>
-          <td>₱${p.price.toFixed(2)}</td>
-          <td>${p.reorder_threshold}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-secondary" onclick="editProduct(${p.id})">Edit</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.id})">Delete</button>
-            <button class="btn btn-sm btn-outline-success" onclick="adjustStock(${p.id})">Adjust Stock</button>
-          </td>
-        </tr>`).join("");
-
-      document.getElementById("main").innerHTML = `
-        <div class="row mb-4">
-          <div class="col-md-4"><div class="card p-3"><h5>Total product types</h5><h2>${products.length}</h2></div></div>
-          <div class="col-md-4"><div class="card p-3"><h5>Total items</h5><h2>${totalItems}</h2></div></div>
-          <div class="col-md-4"><div class="card p-3"><h5>Inventory value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
-        </div>
-        <div class="d-flex justify-content-between mb-3">
-          <h4>Recent products</h4>
-          <button class="btn btn-primary" onclick="addProduct()">Add product</button>
-        </div>
-        <table class="table table-striped">
-          <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-        <button class="btn btn-warning" onclick="showLowStock()">View low-stock items (${lowCount})</button>
-      `;
-    }
-
-    // ---------- Product List ----------
-    function showProducts() {
-      let rows = products.map(p => `
-        <tr>
-          <td>${p.sku}</td>
-          <td>${p.name}</td>
-          <td>${p.description}</td>
-          <td>${p.stock}</td>
-          <td>₱${p.price.toFixed(2)}</td>
-          <td>${p.reorder_threshold}</td>
-          <td>
-            <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Delete</button>
-            <button class="btn btn-sm btn-success" onclick="adjustStock(${p.id})">Adjust Stock</button>
-          </td>
-        </tr>
-      `).join("");
-
-      document.getElementById("main").innerHTML = `
-        <div class="d-flex justify-content-between mb-3">
-          <h3>Products</h3>
-          <button class="btn btn-primary" onclick="addProduct()">Add product</button>
-        </div>
-        <table class="table table-hover">
-          <thead><tr><th>SKU</th><th>Name</th><th>Description</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    }
-
-    // ---------- Add Product ----------
-    function addProduct() {
-      document.getElementById("main").innerHTML = `
-        <h3>Add Product</h3>
-        <form onsubmit="saveNewProduct(event)">
-          <input class="form-control mb-2" name="sku" placeholder="SKU" required>
-          <input class="form-control mb-2" name="name" placeholder="Name" required>
-          <textarea class="form-control mb-2" name="description" placeholder="Description"></textarea>
-          <input class="form-control mb-2" name="price" type="number" step="0.01" placeholder="Price" required>
-          <input class="form-control mb-2" name="stock" type="number" placeholder="Stock" required>
-          <input class="form-control mb-2" name="reorder" type="number" placeholder="Reorder threshold" required>
-          <button class="btn btn-success" type="submit">Save</button>
-          <button class="btn btn-secondary" onclick="showProducts();return false;">Cancel</button>
-        </form>
-      `;
-    }
-
-    function saveNewProduct(e) {
-      e.preventDefault();
-      let form = e.target;
-      let newP = {
-        id: Date.now(),
-        sku: form.sku.value,
-        name: form.name.value,
-        description: form.description.value,
-        price: parseFloat(form.price.value),
-        stock: parseInt(form.stock.value),
-        reorder_threshold: parseInt(form.reorder.value)
-      };
-      products.push(newP);
-      saveProducts();
-      showProducts();
-    }
-
-    // ---------- Edit Product ----------
-    function editProduct(id) {
-      let p = products.find(x => x.id === id);
-      document.getElementById("main").innerHTML = `
-        <h3>Edit Product</h3>
-        <form onsubmit="updateProduct(event, ${id})">
-          <input class="form-control mb-2" name="sku" value="${p.sku}" required>
-          <input class="form-control mb-2" name="name" value="${p.name}" required>
-          <textarea class="form-control mb-2" name="description">${p.description}</textarea>
-          <input class="form-control mb-2" name="price" type="number" step="0.01" value="${p.price}" required>
-          <input class="form-control mb-2" name="stock" type="number" value="${p.stock}" required>
-          <input class="form-control mb-2" name="reorder" type="number" value="${p.reorder_threshold}" required>
-          <button class="btn btn-success" type="submit">Update</button>
-          <button class="btn btn-secondary" onclick="showProducts();return false;">Cancel</button>
-        </form>
-      `;
-    }
-
-    function updateProduct(e, id) {
-      e.preventDefault();
-      let form = e.target;
-      let p = products.find(x => x.id === id);
-      p.sku = form.sku.value;
-      p.name = form.name.value;
-      p.description = form.description.value;
-      p.price = parseFloat(form.price.value);
-      p.stock = parseInt(form.stock.value);
-      p.reorder_threshold = parseInt(form.reorder.value);
-      saveProducts();
-      showProducts();
-    }
-
-    // ---------- Delete Product ----------
-    function deleteProduct(id) {
-      if (!confirm("Delete product?")) return;
-      products = products.filter(p => p.id !== id);
-      saveProducts();
-      showProducts();
-    }
-
-    // ---------- Adjust Stock ----------
-    function adjustStock(id) {
-      let p = products.find(x => x.id === id);
-      let adj = parseInt(prompt("Adjust stock (use negative to subtract):", 0));
-      if (isNaN(adj)) return;
-      p.stock = Math.max(0, p.stock + adj);
-      saveProducts();
-      showProducts();
-    }
-
-    // ---------- Low Stock ----------
-    function showLowStock() {
-      let items = products.filter(p => p.stock <= p.reorder_threshold);
-      let rows = items.map(p => `
-        <tr>
-          <td>${p.sku}</td>
-          <td>${p.name}</td>
-          <td>${p.stock}</td>
-          <td>${p.reorder_threshold}</td>
-          <td>
-            <button class="btn btn-sm btn-success" onclick="adjustStock(${p.id})">Adjust</button>
-            <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})">Edit</button>
-          </td>
-        </tr>
-      `).join("") || "<tr><td colspan='5'>No low-stock items</td></tr>";
-
-      document.getElementById("main").innerHTML = `
-        <h3>Low Stock Items</h3>
-        <table class="table table-bordered">
-          <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Threshold</th><th>Actions</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <button class="btn btn-secondary" onclick="showDashboard()">Back</button>
-      `;
-    }
-
-    // ---------- Export CSV ----------
-// Keep a global object to track previous stock
-let previousStocks = {};
-
-function exportCSV() {
-  // Add timestamp
-  let now = new Date();
-  let timestamp = now.toLocaleString();
-
-  // CSV headers
-  let csv = "Timestamp,SKU,Name,Description,Previous Stock,Current Stock,Price,Threshold\n";
-
-  products.forEach(p => {
-    let prevStock = previousStocks[p.sku] !== undefined ? previousStocks[p.sku] : p.stock;
-
-    // Add row
-    csv += `${timestamp},${p.sku},${p.name},${p.description},${prevStock},${p.stock},${p.price},${p.reorder_threshold}\n`;
-
-    // Update previous stock for next export
-    previousStocks[p.sku] = p.stock;
   });
 
-  // Download CSV
-  let blob = new Blob([csv], { type: "text/csv" });
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "inventory.csv";
-  a.click();
-}
+  function login() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
 
+    if (user === "admin" && pass === "password123") {
+      localStorage.setItem("loggedIn", "true");
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      showDashboard();
+    } else {
+      alert("Invalid username or password!");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("loggedIn");
+    document.getElementById("app").style.display = "none";
+    document.getElementById("loginForm").style.display = "flex";
+  }
+
+  // ---------- INVENTORY DATA ----------
+  let products = [];
+
+  // ---------- Dashboard ----------
+  function showDashboard() {
+    let totalItems = products.reduce((sum, p) => sum + p.stock, 0);
+    let totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
+    let lowCount = products.filter(p => p.stock <= p.reorder_threshold).length;
+
+    let tableRows = products.map(p => `
+      <tr>
+        <td>${p.sku}</td>
+        <td>${p.name}</td>
+        <td>${p.stock}</td>
+        <td>₱${p.price.toFixed(2)}</td>
+        <td>${p.reorder_threshold}</td>
+      </tr>`).join("");
+
+    document.getElementById("main").innerHTML = `
+      <div class="row mb-4">
+        <div class="col-md-4"><div class="card p-3"><h5>Total product types</h5><h2>${products.length}</h2></div></div>
+        <div class="col-md-4"><div class="card p-3"><h5>Total items</h5><h2>${totalItems}</h2></div></div>
+        <div class="col-md-4"><div class="card p-3"><h5>Inventory value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
+      </div>
+      <div class="d-flex justify-content-between mb-3">
+        <h4>Recent products</h4>
+        <button class="btn btn-primary" onclick="addProduct()">Add product</button>
+      </div>
+      <table class="table table-striped">
+        <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <button class="btn btn-warning" onclick="showLowStock()">View low-stock items (${lowCount})</button>
+    `;
+  }
+
+  // ---------- Export CSV ----------
+  let previousStocks = {};
+
+  function exportCSV() {
+    let now = new Date();
+    let timestamp = now.toLocaleString();
+    let csv = "Timestamp,SKU,Name,Description,Previous Stock,Current Stock,Price,Threshold\n";
+
+    products.forEach(p => {
+      let prevStock = previousStocks[p.sku] !== undefined ? previousStocks[p.sku] : p.stock;
+      csv += `${timestamp},${p.sku},${p.name},${p.description || ""},${prevStock},${p.stock},${p.price},${p.reorder_threshold}\n`;
+      previousStocks[p.sku] = p.stock;
+    });
+
+    let blob = new Blob([csv], { type: "text/csv" });
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "inventory.csv";
+    a.click();
+  }
   </script>
+
   <script type="module">
-  // Import Firebase functions
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } 
+  import { getFirestore, collection, getDocs, addDoc } 
     from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
     authDomain: "doubledbrew-569cd.firebaseapp.com",
@@ -348,11 +162,9 @@ function exportCSV() {
     appId: "1:28995576921:web:597ac212cce2eb7066fd48"
   };
 
-  // Initialize Firebase and Firestore
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Example: load products from Firestore
   async function loadProducts() {
     const querySnapshot = await getDocs(collection(db, "products"));
     products = [];
@@ -362,7 +174,6 @@ function exportCSV() {
     showDashboard();
   }
 
-  // Example: save a new product to Firestore
   async function saveNewProduct(e) {
     e.preventDefault();
     let form = e.target;
@@ -378,10 +189,7 @@ function exportCSV() {
     loadProducts();
   }
 
-  // Replace localStorage calls with Firestore later
   loadProducts();
-</script>
-
+  </script>
 </body>
 </html>
-
