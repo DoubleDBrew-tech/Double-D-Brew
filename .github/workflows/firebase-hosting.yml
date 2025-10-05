@@ -27,4 +27,5 @@ jobs:
       - name: Deploy to Firebase
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only hosting
+        run: firebase deploy --only hosting --project doubledbrew-569cd
+
