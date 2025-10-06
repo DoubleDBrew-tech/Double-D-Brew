@@ -71,7 +71,22 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 let products = [];
+  // ---------- LOGIN FUNCTION ----------
+window.login = async function () {
+  const email = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
 
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    localStorage.setItem("loggedIn", "true");
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    loadProducts();
+  } catch (error) {
+    alert("❌ Invalid email or password!");
+    console.error(error);
+  }
+};
 // ---------- AUTH ----------
 window.showLogin = function () {
   document.getElementById("main").innerHTML = `
