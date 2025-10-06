@@ -65,12 +65,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
 
-// ✅ SIMPLE LOGIN (no Firebase Auth)
+// ✅ SIMPLE LOGIN
 window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  if (email === "admin" && password === "password123") {
+  if (email === "admin" && password === "123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -186,35 +186,52 @@ window.adjustStock = async function (id) {
   loadProducts();
 };
 
-// ✅ EXPORT CSV (with comparison)
+// ✅ EXPORT CSV (with time + comparison inside file)
 window.exportCSV = function () {
-  const csvContent = "data:text/csv;charset=utf-8,"
-    + ["SKU,Name,Stock,Price,Reorder Threshold"].join(",") + "\n"
-    + products.map(p => `${p.sku},${p.name},${p.stock},${p.price},${p.reorder_threshold}`).join("\n");
-
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
-  const fileName = `inventory_${timestamp}.csv`;
+
+  const dataLines = products.map(p => `${p.sku},${p.name},${p.stock},${p.price},${p.reorder_threshold}`);
+  const header = "SKU,Name,Stock,Price,Reorder Threshold";
 
   const previousData = localStorage.getItem("lastExport");
-  if (previousData) compareExports(previousData, csvContent);
-  localStorage.setItem("lastExport", csvContent);
+  let comparisonNotes = "";
+
+  if (previousData) {
+    comparisonNotes = compareExports(previousData, dataLines.join("\n"));
+  } else {
+    comparisonNotes = "📦 First export — no previous data to compare.";
+  }
+
+  localStorage.setItem("lastExport", dataLines.join("\n"));
+
+  const csvContent = "data:text/csv;charset=utf-8,"
+    + `Export Date: ${timestamp}\n${comparisonNotes}\n\n${header}\n${dataLines.join("\n")}`;
 
   const link = document.createElement("a");
   link.href = encodeURI(csvContent);
-  link.download = fileName;
+  link.download = `inventory_${timestamp}.csv`;
   link.click();
 };
 
+// ✅ Compare function (for alerts + CSV notes)
 function compareExports(prev, current) {
-  const prevLines = prev.split("\n").slice(1);
-  const currLines = current.split("\n").slice(1);
-  const differences = currLines.filter(line => !prevLines.includes(line));
-  if (differences.length > 0) {
-    alert("🆕 New or changed entries since last export:\n" + differences.join("\n"));
+  const prevLines = prev.split("\n");
+  const currLines = current.split("\n");
+  const added = currLines.filter(line => !prevLines.includes(line));
+  const removed = prevLines.filter(line => !currLines.includes(line));
+
+  let note = "";
+  if (added.length === 0 && removed.length === 0) {
+    note = "✅ No changes since last export.";
+    alert(note);
   } else {
-    alert("No changes since last export ✅");
+    note = "🔄 Comparison Results:";
+    if (added.length > 0) note += `\n🆕 Added/Changed: ${added.length}`;
+    if (removed.length > 0) note += `\n❌ Removed: ${removed.length}`;
+    alert(`${note}\n\n🆕 Added:\n${added.join("\n")}\n\n❌ Removed:\n${removed.join("\n")}`);
   }
+  return note;
 }
 
 // ✅ SHOW DASHBOARD
@@ -240,7 +257,10 @@ window.showDashboard = function () {
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between mb-3">
       <h4>Inventory Dashboard</h4>
-      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+      <div>
+        <button class="btn btn-secondary me-2" onclick="showLowStock()">Low Stock</button>
+        <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+      </div>
     </div>
     <div class="row mb-4">
       <div class="col-md-4"><div class="card p-3"><h5>Total Products</h5><h2>${products.length}</h2></div></div>
@@ -251,6 +271,34 @@ window.showDashboard = function () {
       <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr></thead>
       <tbody>${tableRows}</tbody>
     </table>
+  `;
+};
+
+// ✅ LOW STOCK VIEW
+window.showLowStock = function () {
+  const lowStocks = products.filter(p => p.stock <= p.reorder_threshold);
+  if (lowStocks.length === 0) {
+    alert("✅ No low stock items!");
+    return;
+  }
+
+  let rows = lowStocks.map(p => `
+    <tr>
+      <td>${p.sku}</td>
+      <td>${p.name}</td>
+      <td>${p.stock}</td>
+      <td>₱${p.price.toFixed(2)}</td>
+      <td>${p.reorder_threshold}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("main").innerHTML = `
+    <h4>⚠️ Low Stock Products</h4>
+    <table class="table table-bordered">
+      <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <button class="btn btn-secondary" onclick="showDashboard()">Back</button>
   `;
 };
 
