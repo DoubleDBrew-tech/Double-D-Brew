@@ -76,7 +76,7 @@ window.login = async function () {
   const password = document.getElementById("password").value.trim();
 
   // Simple hardcoded login
-  if (email === "admin" && password === "123") {
+  if (email === "admin" && password === "password123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
