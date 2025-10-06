@@ -48,159 +48,252 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
-    authDomain: "doubledbrew-569cd.firebaseapp.com",
-    projectId: "doubledbrew-569cd",
-    storageBucket: "doubledbrew-569cd.appspot.com",
-    messagingSenderId: "28995576921",
-    appId: "1:28995576921:web:597ac212cce2eb7066fd48"
-  };
+import {
+  getAuth, signInWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+// ---------- FIREBASE CONFIG ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
+  authDomain: "doubledbrew-569cd.firebaseapp.com",
+  projectId: "doubledbrew-569cd",
+  storageBucket: "doubledbrew-569cd.appspot.com",
+  messagingSenderId: "28995576921",
+  appId: "1:28995576921:web:597ac212cce2eb7066fd48"
+};
 
-  let products = [];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let products = [];
 
-  async function loadProducts() {
-    const querySnapshot = await getDocs(collection(db, "products"));
-    products = [];
-    querySnapshot.forEach((doc) => {
-      products.push({ id: doc.id, ...doc.data() });
-    });
-    showDashboard();
-  }
-
-  // ---------- LOGIN SYSTEM ----------
-  document.addEventListener("DOMContentLoaded", () => {
-    const loggedIn = localStorage.getItem("loggedIn");
-  // Always show login form on reload
-document.getElementById("loginForm").style.display = "flex";
-localStorage.removeItem("loggedIn");
-
-  });
-
-  window.login = function() {
-    const user = document.getElementById("username").value;
-    const pass = document.getElementById("password").value;
-    if (user === "admin" && pass === "password123") {
-      localStorage.setItem("loggedIn", "true");
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      loadProducts(); // load right after login
-    } else {
-      alert("Invalid username or password!");
-    }
-  };
-
-  window.logout = function() {
-    localStorage.removeItem("loggedIn");
-    document.getElementById("app").style.display = "none";
-    document.getElementById("loginForm").style.display = "flex";
-  };
-
-  // ---------- DASHBOARD ----------
-  window.showDashboard = function() {
-    let totalItems = products.reduce((sum, p) => sum + (p.stock || 0), 0);
-    let totalValue = products.reduce((sum, p) => sum + (p.stock || 0) * (p.price || 0), 0);
-
-    let tableRows = products.map(p => `
-      <tr>
-        <td>${p.sku}</td>
-        <td>${p.name}</td>
-        <td>${p.stock}</td>
-        <td>₱${p.price?.toFixed(2)}</td>
-        <td>${p.reorder_threshold}</td>
-      </tr>`).join("");
-
-    document.getElementById("main").innerHTML = `
-      <div class="row mb-4">
-        <div class="col-md-4"><div class="card p-3"><h5>Total product types</h5><h2>${products.length}</h2></div></div>
-        <div class="col-md-4"><div class="card p-3"><h5>Total items</h5><h2>${totalItems}</h2></div></div>
-        <div class="col-md-4"><div class="card p-3"><h5>Inventory value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
-      </div>
-
-      <div class="d-flex justify-content-between mb-3">
-        <h4>Products</h4>
-        <button class="btn btn-primary" onclick="showAddProductForm()">Add Product</button>
-      </div>
-
-      <table class="table table-striped">
-        <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    `;
-  };
-
-  // ---------- ADD PRODUCT FORM ----------
-  window.showAddProductForm = function() {
-    document.getElementById("main").innerHTML = `
-      <h3>Add New Product</h3>
-      <form id="addProductForm">
-        <input type="text" name="sku" class="form-control mb-2" placeholder="SKU" required>
-        <input type="text" name="name" class="form-control mb-2" placeholder="Name" required>
-        <input type="text" name="description" class="form-control mb-2" placeholder="Description">
-        <input type="number" name="price" class="form-control mb-2" placeholder="Price" required>
-        <input type="number" name="stock" class="form-control mb-2" placeholder="Stock" required>
-        <input type="number" name="reorder_threshold" class="form-control mb-3" placeholder="Reorder Threshold" required>
-        <button type="submit" class="btn btn-success">Save Product</button>
-        <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+// ---------- AUTH ----------
+window.showLogin = function () {
+  document.getElementById("main").innerHTML = `
+    <div class="container mt-5" style="max-width:400px;">
+      <h3 class="mb-3">Login</h3>
+      <form id="loginForm">
+        <input class="form-control mb-2" type="email" name="email" placeholder="Email" required>
+        <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
+        <button class="btn btn-primary w-100">Login</button>
       </form>
-    `;
+    </div>
+  `;
+  document.getElementById("loginForm").addEventListener("submit", handleLogin);
+};
 
-    document.getElementById("addProductForm").addEventListener("submit", saveNewProduct);
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = e.target.email.value;
+  const password = e.target.password.value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    localStorage.setItem("loggedIn", "true");
+    loadProducts();
+  } catch (error) {
+    alert("❌ Invalid login credentials!");
+  }
+}
+
+window.handleLogout = async function () {
+  await signOut(auth);
+  localStorage.removeItem("loggedIn");
+  showLogin();
+};
+
+// ---------- LOAD PRODUCTS ----------
+async function loadProducts() {
+  const querySnapshot = await getDocs(collection(db, "products"));
+  products = [];
+  querySnapshot.forEach((docu) => {
+    products.push({ id: docu.id, ...docu.data() });
+  });
+  showDashboard();
+}
+
+// ---------- ADD PRODUCT ----------
+async function addProduct() {
+  document.getElementById("main").innerHTML = `
+    <h3>Add New Product</h3>
+    <form id="addForm">
+      <input class="form-control mb-2" name="sku" placeholder="SKU" required>
+      <input class="form-control mb-2" name="name" placeholder="Name" required>
+      <input class="form-control mb-2" name="description" placeholder="Description">
+      <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" required>
+      <input class="form-control mb-2" name="stock" placeholder="Stock" type="number" required>
+      <input class="form-control mb-2" name="reorder" placeholder="Reorder Threshold" type="number" required>
+      <button class="btn btn-success">Save Product</button>
+      <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+    </form>
+  `;
+  document.getElementById("addForm").addEventListener("submit", saveNewProduct);
+}
+
+async function saveNewProduct(e) {
+  e.preventDefault();
+  const form = e.target;
+  const newP = {
+    sku: form.sku.value,
+    name: form.name.value,
+    description: form.description.value,
+    price: parseFloat(form.price.value),
+    stock: parseInt(form.stock.value),
+    reorder_threshold: parseInt(form.reorder.value)
   };
+  await addDoc(collection(db, "products"), newP);
+  alert("✅ Product added successfully!");
+  loadProducts();
+}
 
-  async function saveNewProduct(e) {
-    e.preventDefault();
-    const form = e.target;
-    const newProduct = {
-      sku: form.sku.value,
-      name: form.name.value,
-      description: form.description.value,
-      price: parseFloat(form.price.value),
-      stock: parseInt(form.stock.value),
-      reorder_threshold: parseInt(form.reorder_threshold.value)
-    };
-    await addDoc(collection(db, "products"), newProduct);
-    alert("Product added successfully!");
+// ---------- EDIT PRODUCT ----------
+window.editProduct = async function (id) {
+  const p = products.find(x => x.id === id);
+  document.getElementById("main").innerHTML = `
+    <h3>Edit Product</h3>
+    <form id="editForm">
+      <input type="hidden" name="id" value="${p.id}">
+      <input class="form-control mb-2" name="sku" value="${p.sku}" required>
+      <input class="form-control mb-2" name="name" value="${p.name}" required>
+      <input class="form-control mb-2" name="description" value="${p.description || ""}">
+      <input class="form-control mb-2" name="price" value="${p.price}" type="number" step="0.01" required>
+      <input class="form-control mb-2" name="stock" value="${p.stock}" type="number" required>
+      <input class="form-control mb-2" name="reorder" value="${p.reorder_threshold}" type="number" required>
+      <button class="btn btn-primary">Update Product</button>
+      <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+    </form>
+  `;
+  document.getElementById("editForm").addEventListener("submit", updateProduct);
+};
+
+async function updateProduct(e) {
+  e.preventDefault();
+  const form = e.target;
+  const ref = doc(db, "products", form.id.value);
+  await updateDoc(ref, {
+    sku: form.sku.value,
+    name: form.name.value,
+    description: form.description.value,
+    price: parseFloat(form.price.value),
+    stock: parseInt(form.stock.value),
+    reorder_threshold: parseInt(form.reorder.value)
+  });
+  alert("✅ Product updated!");
+  loadProducts();
+}
+
+// ---------- DELETE PRODUCT ----------
+window.deleteProduct = async function (id) {
+  if (confirm("⚠️ Delete this product?")) {
+    await deleteDoc(doc(db, "products", id));
+    alert("🗑️ Product deleted.");
     loadProducts();
   }
+};
 
-  // ---------- EXPORT CSV ----------
-// ---------- Export CSV with Comparison ----------
-let previousExport = JSON.parse(localStorage.getItem("previousExport")) || {};
+// ---------- ADJUST STOCK ----------
+window.adjustStock = async function (id) {
+  const p = products.find(x => x.id === id);
+  const adjust = parseInt(prompt(`Adjust stock for ${p.name}: (current: ${p.stock})`, "0"));
+  if (isNaN(adjust)) return alert("Invalid number!");
+  const ref = doc(db, "products", id);
+  await updateDoc(ref, { stock: p.stock + adjust });
+  alert("✅ Stock adjusted!");
+  loadProducts();
+};
 
-function exportCSV() {
-  let now = new Date();
-  let timestamp = now.toLocaleString();
+// ---------- EXPORT CSV (with comparison) ----------
+window.exportCSV = function () {
+  const csvContent = "data:text/csv;charset=utf-8,"
+    + ["SKU,Name,Stock,Price,Reorder Threshold"].join(",") + "\n"
+    + products.map(p => `${p.sku},${p.name},${p.stock},${p.price},${p.reorder_threshold}`).join("\n");
 
-  let csv = "Timestamp,SKU,Name,Description,Previous Stock,Current Stock,Change,Price,Threshold\n";
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
+  const fileName = `inventory_${timestamp}.csv`;
 
-  products.forEach(p => {
-    let prevStock = previousExport[p.sku] !== undefined ? previousExport[p.sku] : p.stock;
-    let change = p.stock - prevStock;
+  // Save current export for comparison next time
+  const previousData = localStorage.getItem("lastExport");
+  if (previousData) {
+    compareExports(previousData, csvContent);
+  }
+  localStorage.setItem("lastExport", csvContent);
 
-    csv += `${timestamp},${p.sku},${p.name},${p.description || ""},${prevStock},${p.stock},${change},${p.price},${p.reorder_threshold}\n`;
+  const link = document.createElement("a");
+  link.href = encodeURI(csvContent);
+  link.download = fileName;
+  link.click();
+};
 
-    // Save current stock for next comparison
-    previousExport[p.sku] = p.stock;
-  });
+function compareExports(prev, current) {
+  const prevLines = prev.split("\n").slice(1);
+  const currLines = current.split("\n").slice(1);
+  let differences = [];
 
-  // Save this export data locally
-  localStorage.setItem("previousExport", JSON.stringify(previousExport));
+  for (let line of currLines) {
+    if (!prevLines.includes(line)) differences.push(line);
+  }
 
-  // Create and download CSV file
-  let blob = new Blob([csv], { type: "text/csv" });
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `inventory_export_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}.csv`;
-  a.click();
+  if (differences.length > 0) {
+    alert("🆕 New or changed entries since last export:\n" + differences.join("\n"));
+  } else {
+    alert("No changes since last export ✅");
+  }
+}
 
-  alert("✅ CSV exported successfully with timestamp and stock comparison!");
+// ---------- SHOW DASHBOARD ----------
+window.showDashboard = function () {
+  let totalItems = products.reduce((sum, p) => sum + p.stock, 0);
+  let totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
+
+  let tableRows = products.map(p => `
+    <tr>
+      <td>${p.sku}</td>
+      <td>${p.name}</td>
+      <td>${p.stock}</td>
+      <td>₱${p.price.toFixed(2)}</td>
+      <td>${p.reorder_threshold}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-success" onclick="adjustStock('${p.id}')">Adjust</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("main").innerHTML = `
+    <div class="d-flex justify-content-between mb-3">
+      <h4>Inventory Dashboard</h4>
+      <div>
+        <button class="btn btn-outline-info me-2" onclick="exportCSV()">Export CSV</button>
+        <button class="btn btn-danger" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+    <div class="row mb-4">
+      <div class="col-md-4"><div class="card p-3"><h5>Total Products</h5><h2>${products.length}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3"><h5>Inventory Value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
+    </div>
+    <div class="d-flex justify-content-between mb-3">
+      <h5>Product List</h5>
+      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
+    </div>
+    <table class="table table-striped">
+      <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  `;
+};
+
+// ---------- AUTO CHECK LOGIN ----------
+if (localStorage.getItem("loggedIn") === "true") {
+  loadProducts();
+} else {
+  showLogin();
 }
 </script>
 </body>
