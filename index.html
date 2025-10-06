@@ -23,7 +23,7 @@
 <div id="loginForm">
   <div class="login-box">
     <h2>Double'd Brew Login</h2>
-    <input type="text" id="username" class="form-control mb-2" placeholder="Email" required>
+    <input type="text" id="username" class="form-control mb-2" placeholder="Username" required>
     <input type="password" id="password" class="form-control mb-3" placeholder="Password" required>
     <button class="btn btn-primary w-100" onclick="login()">Login</button>
   </div>
@@ -57,7 +57,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
   projectId: "doubledbrew-569cd",
-  storageBucket: "doubledbrew-569cd.firebasestorage.app",
+  storageBucket: "doubledbrew-569cd.appspot.com",
   messagingSenderId: "28995576921",
   appId: "1:28995576921:web:597ac212cce2eb7066fd48"
 };
@@ -66,12 +66,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
 
-// ---------- LOGIN ----------
+// ---------- SIMPLE LOGIN SYSTEM ----------
 window.login = function () {
-  const email = document.getElementById("username").value.trim();
+  const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  if (email === "admin" && password === "password123") {
+  if (username === "admin" && password === "123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -81,13 +81,12 @@ window.login = function () {
   }
 };
 
+// ---------- LOGOUT ----------
 window.logout = function () {
   localStorage.removeItem("loggedIn");
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
 };
-
-
 
 // ---------- LOAD PRODUCTS ----------
 async function loadProducts() {
@@ -189,7 +188,7 @@ window.adjustStock = async function (id) {
   loadProducts();
 };
 
-// ---------- EXPORT CSV (with comparison) ----------
+// ---------- EXPORT CSV ----------
 window.exportCSV = function () {
   const csvContent = "data:text/csv;charset=utf-8,"
     + ["SKU,Name,Stock,Price,Reorder Threshold"].join(",") + "\n"
@@ -257,7 +256,7 @@ window.showDashboard = function () {
   `;
 };
 
-// ---------- AUTO LOGIN CHECK ----------
+// ---------- AUTO LOGIN ----------
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
