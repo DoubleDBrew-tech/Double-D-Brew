@@ -77,13 +77,10 @@
   // ---------- LOGIN SYSTEM ----------
   document.addEventListener("DOMContentLoaded", () => {
     const loggedIn = localStorage.getItem("loggedIn");
-    if (loggedIn === "true") {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      loadProducts(); // load immediately
-    } else {
-      document.getElementById("loginForm").style.display = "flex";
-    }
+  // Always show login form on reload
+document.getElementById("loginForm").style.display = "flex";
+localStorage.removeItem("loggedIn");
+
   });
 
   window.login = function() {
