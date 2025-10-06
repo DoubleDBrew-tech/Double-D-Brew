@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loggedIn === "true") {
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
-    window.loadProducts(); // show dashboard immediately
+    loadProducts();
   } else {
     document.getElementById("loginForm").style.display = "flex";
   }
@@ -64,7 +64,7 @@ function login() {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
-    window.loadProducts();
+    loadProducts();
   } else {
     alert("Invalid username or password!");
   }
@@ -115,7 +115,7 @@ function showDashboard() {
 function addProduct() {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
-    <form id="addForm" onsubmit="window.saveNewProduct(event)">
+    <form id="addForm">
       <input type="text" name="sku" class="form-control mb-2" placeholder="SKU" required>
       <input type="text" name="name" class="form-control mb-2" placeholder="Product Name" required>
       <input type="text" name="description" class="form-control mb-2" placeholder="Description">
@@ -126,6 +126,7 @@ function addProduct() {
       <button class="btn btn-secondary ms-2" type="button" onclick="showDashboard()">Cancel</button>
     </form>
   `;
+  document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 }
 
 // ---------- EXPORT CSV ----------
@@ -147,9 +148,10 @@ function exportCSV() {
 }
 </script>
 
+<!-- FIREBASE -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
@@ -163,7 +165,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Load products from Firebase
 async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
   window.products = [];
@@ -173,7 +174,6 @@ async function loadProducts() {
   window.showDashboard();
 }
 
-// Save new product to Firebase
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
@@ -189,7 +189,6 @@ async function saveNewProduct(e) {
   await loadProducts();
 }
 
-// expose to global scope
 window.loadProducts = loadProducts;
 window.saveNewProduct = saveNewProduct;
 </script>
