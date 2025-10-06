@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Double'd Brew</title>
+<title>Double'd Brew Inventory</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loggedIn === "true") {
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
-    loadProducts();
+    window.loadProducts(); // show dashboard immediately
   } else {
     document.getElementById("loginForm").style.display = "flex";
   }
@@ -64,7 +64,7 @@ function login() {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
-    loadProducts();
+    window.loadProducts();
   } else {
     alert("Invalid username or password!");
   }
@@ -115,7 +115,7 @@ function showDashboard() {
 function addProduct() {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
-    <form id="addForm" onsubmit="saveNewProduct(event)">
+    <form id="addForm" onsubmit="window.saveNewProduct(event)">
       <input type="text" name="sku" class="form-control mb-2" placeholder="SKU" required>
       <input type="text" name="name" class="form-control mb-2" placeholder="Product Name" required>
       <input type="text" name="description" class="form-control mb-2" placeholder="Description">
@@ -163,18 +163,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Load products
-export async function loadProducts() {
+// Load products from Firebase
+async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
-  products = [];
+  window.products = [];
   querySnapshot.forEach((doc) => {
-    products.push({ id: doc.id, ...doc.data() });
+    window.products.push({ id: doc.id, ...doc.data() });
   });
-  showDashboard();
+  window.showDashboard();
 }
 
-// Save product
-export async function saveNewProduct(e) {
+// Save new product to Firebase
+async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
   const newP = {
@@ -188,6 +188,10 @@ export async function saveNewProduct(e) {
   await addDoc(collection(db, "products"), newP);
   await loadProducts();
 }
+
+// expose to global scope
+window.loadProducts = loadProducts;
+window.saveNewProduct = saveNewProduct;
 </script>
 
 </body>
