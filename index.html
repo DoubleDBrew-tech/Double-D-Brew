@@ -51,16 +51,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebas
 import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-import {
-  getAuth, signInWithEmailAndPassword, signOut
-} from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
 // ---------- FIREBASE CONFIG ----------
 const firebaseConfig = {
-  apiKey: "AIzaSyA1smwaGZUVzA01JXjcv7hkSNdf0eRVB0w",
+  apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
   projectId: "doubledbrew-569cd",
-  storageBucket: "doubledbrew-569cd.appspot.com",
+  storageBucket: "doubledbrew-569cd.firebasestorage.app",
   messagingSenderId: "28995576921",
   appId: "1:28995576921:web:597ac212cce2eb7066fd48"
 };
@@ -71,11 +68,10 @@ const auth = getAuth(app);
 let products = [];
 
 // ---------- LOGIN ----------
-window.login = async function () {
+window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  // Simple hardcoded login
   if (email === "admin" && password === "password123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
@@ -86,13 +82,23 @@ window.login = async function () {
   }
 };
 
-// ---------- LOGOUT ----------
-window.logout = async function () {
+window.logout = function () {
   localStorage.removeItem("loggedIn");
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
 };
 
+
+
+// ---------- LOAD PRODUCTS ----------
+async function loadProducts() {
+  const querySnapshot = await getDocs(collection(db, "products"));
+  products = [];
+  querySnapshot.forEach((docu) => {
+    products.push({ id: docu.id, ...docu.data() });
+  });
+  showDashboard();
+}
 
 // ---------- ADD PRODUCT ----------
 window.addProduct = function () {
