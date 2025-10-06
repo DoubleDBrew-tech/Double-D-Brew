@@ -75,35 +75,24 @@ window.login = async function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
+  // Simple hardcoded login
+  if (email === "admin" && password === "123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("app").style.display = "block";
     loadProducts();
-  } catch (error) {
-    alert("❌ Invalid email or password!");
-    console.error(error);
+  } else {
+    alert("❌ Invalid username or password!");
   }
 };
 
 // ---------- LOGOUT ----------
 window.logout = async function () {
-  await signOut(auth);
   localStorage.removeItem("loggedIn");
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
 };
 
-// ---------- LOAD PRODUCTS ----------
-async function loadProducts() {
-  const querySnapshot = await getDocs(collection(db, "products"));
-  products = [];
-  querySnapshot.forEach((docu) => {
-    products.push({ id: docu.id, ...docu.data() });
-  });
-  showDashboard();
-}
 
 // ---------- ADD PRODUCT ----------
 window.addProduct = function () {
