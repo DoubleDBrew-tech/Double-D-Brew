@@ -171,17 +171,37 @@ localStorage.removeItem("loggedIn");
   }
 
   // ---------- EXPORT CSV ----------
-  window.exportCSV = function() {
-    let csv = "SKU,Name,Description,Stock,Price,Threshold\n";
-    products.forEach(p => {
-      csv += `${p.sku},${p.name},${p.description || ""},${p.stock},${p.price},${p.reorder_threshold}\n`;
-    });
-    let blob = new Blob([csv], { type: "text/csv" });
-    let a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "inventory.csv";
-    a.click();
-  };
+// ---------- Export CSV with Comparison ----------
+let previousExport = JSON.parse(localStorage.getItem("previousExport")) || {};
+
+function exportCSV() {
+  let now = new Date();
+  let timestamp = now.toLocaleString();
+
+  let csv = "Timestamp,SKU,Name,Description,Previous Stock,Current Stock,Change,Price,Threshold\n";
+
+  products.forEach(p => {
+    let prevStock = previousExport[p.sku] !== undefined ? previousExport[p.sku] : p.stock;
+    let change = p.stock - prevStock;
+
+    csv += `${timestamp},${p.sku},${p.name},${p.description || ""},${prevStock},${p.stock},${change},${p.price},${p.reorder_threshold}\n`;
+
+    // Save current stock for next comparison
+    previousExport[p.sku] = p.stock;
+  });
+
+  // Save this export data locally
+  localStorage.setItem("previousExport", JSON.stringify(previousExport));
+
+  // Create and download CSV file
+  let blob = new Blob([csv], { type: "text/csv" });
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `inventory_export_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}.csv`;
+  a.click();
+
+  alert("✅ CSV exported successfully with timestamp and stock comparison!");
+}
 </script>
 </body>
 </html>
