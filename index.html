@@ -234,8 +234,7 @@ function compareExports(prev, current) {
   return note;
 }
 
-// ✅ SHOW DASHBOARD
-// ✅ SHOW DASHBOARD (fixed + added visible buttons)
+// ✅ SHOW DASHBOARD (with Add Product + Low Stock buttons only)
 window.showDashboard = function () {
   let totalItems = products.reduce((sum, p) => sum + p.stock, 0);
   let totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
@@ -258,10 +257,8 @@ window.showDashboard = function () {
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4>Inventory Dashboard</h4>
-      <div class="btn-group">
-        <button class="btn btn-danger me-2" onclick="logout()">Logout</button>
+      <div>
         <button class="btn btn-secondary me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-        <button class="btn btn-success me-2" onclick="exportCSV()">📤 Export CSV</button>
         <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
       </div>
     </div>
@@ -281,15 +278,16 @@ window.showDashboard = function () {
   `;
 };
 
-// ✅ LOW STOCK VIEW
+
+// ✅ SHOW LOW STOCK PRODUCTS
 window.showLowStock = function () {
-  const lowStocks = products.filter(p => p.stock <= p.reorder_threshold);
-  if (lowStocks.length === 0) {
-    alert("✅ No low stock items!");
+  const lowStock = products.filter(p => p.stock <= p.reorder_threshold);
+  if (lowStock.length === 0) {
+    alert("✅ All stocks are sufficient!");
     return;
   }
 
-  let rows = lowStocks.map(p => `
+  let rows = lowStock.map(p => `
     <tr>
       <td>${p.sku}</td>
       <td>${p.name}</td>
@@ -300,12 +298,17 @@ window.showLowStock = function () {
   `).join("");
 
   document.getElementById("main").innerHTML = `
-    <h4>⚠️ Low Stock Products</h4>
-    <table class="table table-bordered">
-      <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr></thead>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>⚠️ Low Stock Products</h4>
+      <button class="btn btn-secondary" onclick="showDashboard()">⬅️ Back</button>
+    </div>
+
+    <table class="table table-striped align-middle">
+      <thead class="table-danger">
+        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr>
+      </thead>
       <tbody>${rows}</tbody>
     </table>
-    <button class="btn btn-secondary" onclick="showDashboard()">Back</button>
   `;
 };
 
