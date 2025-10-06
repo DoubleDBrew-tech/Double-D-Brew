@@ -23,7 +23,7 @@
 <div id="loginForm">
   <div class="login-box">
     <h2>Double'd Brew Login</h2>
-    <input type="text" id="username" class="form-control mb-2" placeholder="Username" required>
+    <input type="text" id="username" class="form-control mb-2" placeholder="Email" required>
     <input type="password" id="password" class="form-control mb-3" placeholder="Password" required>
     <button class="btn btn-primary w-100" onclick="login()">Login</button>
   </div>
@@ -37,7 +37,6 @@
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link active" href="#" onclick="showDashboard()">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="#" onclick="showProducts()">Products</a></li>
         </ul>
         <button class="btn btn-outline-light me-2" onclick="exportCSV()">Export CSV</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
@@ -52,7 +51,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebas
 import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
-
 import {
   getAuth, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
@@ -71,7 +69,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 let products = [];
-  // ---------- LOGIN FUNCTION ----------
+
+// ---------- LOGIN ----------
 window.login = async function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -87,38 +86,13 @@ window.login = async function () {
     console.error(error);
   }
 };
-// ---------- AUTH ----------
-window.showLogin = function () {
-  document.getElementById("main").innerHTML = `
-    <div class="container mt-5" style="max-width:400px;">
-      <h3 class="mb-3">Login</h3>
-      <form id="loginForm">
-        <input class="form-control mb-2" type="email" name="email" placeholder="Email" required>
-        <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
-        <button class="btn btn-primary w-100">Login</button>
-      </form>
-    </div>
-  `;
-  document.getElementById("loginForm").addEventListener("submit", handleLogin);
-};
 
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = e.target.email.value;
-  const password = e.target.password.value;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    localStorage.setItem("loggedIn", "true");
-    loadProducts();
-  } catch (error) {
-    alert("❌ Invalid login credentials!");
-  }
-}
-
-window.handleLogout = async function () {
+// ---------- LOGOUT ----------
+window.logout = async function () {
   await signOut(auth);
   localStorage.removeItem("loggedIn");
-  showLogin();
+  document.getElementById("app").style.display = "none";
+  document.getElementById("loginForm").style.display = "flex";
 };
 
 // ---------- LOAD PRODUCTS ----------
@@ -132,7 +106,7 @@ async function loadProducts() {
 }
 
 // ---------- ADD PRODUCT ----------
-async function addProduct() {
+window.addProduct = function () {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
     <form id="addForm">
@@ -147,7 +121,7 @@ async function addProduct() {
     </form>
   `;
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
-}
+};
 
 async function saveNewProduct(e) {
   e.preventDefault();
@@ -166,7 +140,7 @@ async function saveNewProduct(e) {
 }
 
 // ---------- EDIT PRODUCT ----------
-window.editProduct = async function (id) {
+window.editProduct = function (id) {
   const p = products.find(x => x.id === id);
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
@@ -231,11 +205,8 @@ window.exportCSV = function () {
   const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
   const fileName = `inventory_${timestamp}.csv`;
 
-  // Save current export for comparison next time
   const previousData = localStorage.getItem("lastExport");
-  if (previousData) {
-    compareExports(previousData, csvContent);
-  }
+  if (previousData) compareExports(previousData, csvContent);
   localStorage.setItem("lastExport", csvContent);
 
   const link = document.createElement("a");
@@ -247,12 +218,7 @@ window.exportCSV = function () {
 function compareExports(prev, current) {
   const prevLines = prev.split("\n").slice(1);
   const currLines = current.split("\n").slice(1);
-  let differences = [];
-
-  for (let line of currLines) {
-    if (!prevLines.includes(line)) differences.push(line);
-  }
-
+  const differences = currLines.filter(line => !prevLines.includes(line));
   if (differences.length > 0) {
     alert("🆕 New or changed entries since last export:\n" + differences.join("\n"));
   } else {
@@ -283,19 +249,12 @@ window.showDashboard = function () {
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between mb-3">
       <h4>Inventory Dashboard</h4>
-      <div>
-        <button class="btn btn-outline-info me-2" onclick="exportCSV()">Export CSV</button>
-        <button class="btn btn-danger" onclick="handleLogout()">Logout</button>
-      </div>
+      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
     </div>
     <div class="row mb-4">
       <div class="col-md-4"><div class="card p-3"><h5>Total Products</h5><h2>${products.length}</h2></div></div>
       <div class="col-md-4"><div class="card p-3"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
       <div class="col-md-4"><div class="card p-3"><h5>Inventory Value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
-    </div>
-    <div class="d-flex justify-content-between mb-3">
-      <h5>Product List</h5>
-      <button class="btn btn-primary" onclick="addProduct()">Add Product</button>
     </div>
     <table class="table table-striped">
       <thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr></thead>
@@ -304,11 +263,11 @@ window.showDashboard = function () {
   `;
 };
 
-// ---------- AUTO CHECK LOGIN ----------
+// ---------- AUTO LOGIN CHECK ----------
 if (localStorage.getItem("loggedIn") === "true") {
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("app").style.display = "block";
   loadProducts();
-} else {
-  showLogin();
 }
 </script>
 </body>
