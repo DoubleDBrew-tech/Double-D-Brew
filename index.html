@@ -14,6 +14,8 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 350px; text-align: center;
     }
     .login-box h2 { margin-bottom: 20px; color: #6b4226; }
+    /* small helper to keep KG display neat */
+    .kg-small { font-size: 0.85rem; color: #6c757d; display:block; }
   </style>
 </head>
 
@@ -37,7 +39,7 @@
 
       <div class="d-flex ms-auto">
         <!-- SORTING DROPDOWN -->
-        <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:150px;">
+        <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:170px;">
           <option value="">Sort</option>
           <option value="az">A → Z</option>
           <option value="za">Z → A</option>
@@ -60,6 +62,7 @@ import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
+// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
@@ -72,7 +75,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
-let currentCategory = "all"; // new filter value
+let currentCategory = "all"; // filter
 
 window.login = function () {
   const email = document.getElementById("username").value.trim();
@@ -94,17 +97,65 @@ window.logout = function () {
   document.getElementById("loginForm").style.display = "flex";
 };
 
-// LOAD PRODUCTS
+// -------- KG PARSING UTILS --------
+// Accepts strings like "250g", "0.25kg", "1.5 kg", "250", "2"
+// Returns an object { kg_value: number (kg), kg_display: originalNormalizedString }
+function parseKgInput(input) {
+  if (!input || input.toString().trim() === "") return { kg_value: null, kg_display: "" };
+  let s = input.toString().trim().toLowerCase();
+  // normalize spaces
+  s = s.replace(/\s+/g, '');
+  let kg_value = null;
+  // if contains 'g' but not 'kg' => grams
+  if (s.endsWith('g') && !s.endsWith('kg')) {
+    let num = parseFloat(s.replace(/g$/, ''));
+    if (!isNaN(num)) kg_value = num / 1000;
+  } else if (s.endsWith('kg')) {
+    let num = parseFloat(s.replace(/kg$/, ''));
+    if (!isNaN(num)) kg_value = num;
+  } else {
+    // no units — best-effort:
+    // if numeric and >=100 treat as grams, else treat as kg
+    const num = parseFloat(s);
+    if (!isNaN(num)) {
+      if (num >= 100) {
+        kg_value = num / 1000; // assume grams
+        s = s + 'g';
+      } else {
+        kg_value = num; // assume kg
+        // keep as-is (maybe user typed "0.5")
+      }
+    }
+  }
+  // produce display string: prefer original with normalized unit
+  let kg_display = "";
+  if (kg_value === null) {
+    kg_display = input.toString();
+  } else {
+    // if value < 1 kg, show grams if divisible to grams integer
+    if (kg_value < 1) {
+      const grams = Math.round(kg_value * 1000);
+      kg_display = `${grams} g`;
+    } else {
+      // show kg with up to 3 decimals trimmed
+      kg_display = `${+kg_value.toFixed(3)} kg`;
+    }
+  }
+  return { kg_value, kg_display };
+}
+
+// --------- LOAD PRODUCTS ----------
 async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
   products = [];
   querySnapshot.forEach((docu) => {
+    // doc data might not have kg fields (old products)
     products.push({ id: docu.id, ...docu.data() });
   });
   showDashboard();
 }
 
-// ADD PRODUCT
+// --------- ADD PRODUCT ----------
 window.addProduct = function () {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
@@ -119,9 +170,10 @@ window.addProduct = function () {
         <option value="utensil">Utensil</option>
       </select>
 
+      <input class="form-control mb-2" name="kg" placeholder="KG (e.g. 250g, 0.25kg, 1kg)" required>
+
       <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" required>
-      <input class="form-control mb-2" name="stock" placeholder="Stock" type="number" required>
-      <input class="form-control mb-2" name="reorder" placeholder="Reorder Threshold" type="number" required>
+      <input class="form-control mb-2" name="stock" placeholder="Stock (units)" type="number" required>
 
       <button class="btn btn-success">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
@@ -134,14 +186,17 @@ async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
 
+  const kgParsed = parseKgInput(form.kg.value);
+
   const newP = {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
     category: form.category.value,
+    kg: kgParsed.kg_display,     // human-friendly string
+    kg_value: kgParsed.kg_value, // numeric kg number (can be null if parse failed)
     price: parseFloat(form.price.value),
-    stock: parseInt(form.stock.value),
-    reorder_threshold: parseInt(form.reorder.value)
+    stock: parseInt(form.stock.value)
   };
 
   await addDoc(collection(db, "products"), newP);
@@ -149,27 +204,31 @@ async function saveNewProduct(e) {
   loadProducts();
 }
 
-// EDIT PRODUCT
+// --------- EDIT PRODUCT ----------
 window.editProduct = function (id) {
-  const p = products.find(x => x.id === id);
+  const p = products.find(x => x.id === id) || {};
+  // pick a sensible default display for kg
+  const kg_display = p.kg || (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
 
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
     <form id="editForm">
-      <input type="hidden" name="id" value="${p.id}">
-      <input class="form-control mb-2" name="sku" value="${p.sku}" required>
-      <input class="form-control mb-2" name="name" value="${p.name}" required>
+      <input type="hidden" name="id" value="${p.id ?? ''}">
+      <input class="form-control mb-2" name="sku" value="${p.sku ?? ''}" required>
+      <input class="form-control mb-2" name="name" value="${p.name ?? ''}" required>
 
-      <input class="form-control mb-2" name="description" value="${p.description || ""}">
+      <input class="form-control mb-2" name="description" value="${p.description ?? ''}">
       
       <select class="form-control mb-2" name="category" required>
+        <option value="">Select Category</option>
         <option value="ingredient" ${p.category==="ingredient"?"selected":""}>Ingredient</option>
         <option value="utensil" ${p.category==="utensil"?"selected":""}>Utensil</option>
       </select>
 
-      <input class="form-control mb-2" name="price" value="${p.price}" type="number" step="0.01" required>
-      <input class="form-control mb-2" name="stock" value="${p.stock}" type="number" required>
-      <input class="form-control mb-2" name="reorder" value="${p.reorder_threshold}" type="number" required>
+      <input class="form-control mb-2" name="kg" placeholder="KG (e.g. 250g, 0.25kg, 1kg)" value="${kg_display}">
+
+      <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" required>
+      <input class="form-control mb-2" name="stock" value="${p.stock ?? 0}" type="number" required>
 
       <button class="btn btn-primary">Update Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
@@ -182,22 +241,25 @@ async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
 
+  const kgParsed = parseKgInput(form.kg.value);
+
   const ref = doc(db, "products", form.id.value);
   await updateDoc(ref, {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
     category: form.category.value,
+    kg: kgParsed.kg_display,
+    kg_value: kgParsed.kg_value,
     price: parseFloat(form.price.value),
-    stock: parseInt(form.stock.value),
-    reorder_threshold: parseInt(form.reorder.value)
+    stock: parseInt(form.stock.value)
   });
 
-  alert("Updated!");
+  alert("✅ Updated!");
   loadProducts();
 }
 
-// DELETE
+// --------- DELETE ----------
 window.deleteProduct = async function (id) {
   if (confirm("Delete this product?")) {
     await deleteDoc(doc(db, "products", id));
@@ -205,88 +267,97 @@ window.deleteProduct = async function (id) {
   }
 };
 
-// STOCK ADJUST
+// --------- ADJUST STOCK ----------
 window.adjustStock = async function (id) {
   const p = products.find(x => x.id === id);
-  const adjust = parseInt(prompt(`Adjust stock for ${p.name}:`, "0"));
-  if (isNaN(adjust)) return;
+  const adjust = parseInt(prompt(`Adjust stock for ${p.name} (current: ${p.stock}):`, "0"));
+  if (isNaN(adjust)) return alert("Invalid number!");
   const ref = doc(db, "products", id);
   await updateDoc(ref, { stock: p.stock + adjust });
   loadProducts();
 };
 
-// STOCK COLOR FUNCTION
+// --------- STOCK COLOR FUNCTION (0-3 red, 4-6 yellow, 7+ green) ----------
 function stockColor(stock) {
   if (stock <= 3) return "bg-danger text-white fw-bold";
   if (stock <= 6) return "bg-warning fw-bold";
   return "bg-success text-white fw-bold";
 }
 
-// RENDER TABLE
+// --------- RENDER TABLE ----------
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
 
-  tbody.innerHTML = list.map(p => `
-    <tr>
-      <td>${p.sku}</td>
-      <td>${p.name}</td>
+  tbody.innerHTML = list.map(p => {
+    // safe access for price/stock/kg
+    const price = (typeof p.price === 'number') ? p.price : 0;
+    const stock = (typeof p.stock === 'number') ? p.stock : 0;
+    const totalValue = (price * stock).toFixed(2);
+    const kgDisplay = p.kg ? p.kg : (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
 
-      <td class="${stockColor(p.stock)} text-center">${p.stock}</td>
+    return `
+      <tr>
+        <td>${p.sku ?? ''}</td>
+        <td>${p.name ?? ''}</td>
 
-      <td>₱${p.price.toFixed(2)}</td>
+        <td class="${stockColor(stock)} text-center">${stock}</td>
 
-      <td>₱${(p.stock * p.price).toFixed(2)}</td>
+        <td>₱${price.toFixed(2)}</td>
 
-      <td>${p.reorder_threshold}</td>
+        <td>
+          ${kgDisplay ? `<strong>${kgDisplay}</strong>` : `<span class="kg-small">—</span>`}
+        </td>
 
-      <td>
-        <button class="btn btn-sm btn-outline-success" onclick="adjustStock('${p.id}')">Adjust</button>
-        <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">Delete</button>
-      </td>
-    </tr>
-  `).join("");
+        <td>₱${totalValue}</td>
+
+        <td>
+          <button class="btn btn-sm btn-outline-success" onclick="adjustStock('${p.id}')">Adjust</button>
+          <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
-// SORTING
+// --------- SORTING ----------
 window.sortProducts = function () {
   const value = document.getElementById("sortSelect").value;
 
-  if (value === "az") products.sort((a, b) => a.name.localeCompare(b.name));
-  if (value === "za") products.sort((a, b) => b.name.localeCompare(a.name));
-  if (value === "stockLowHigh") products.sort((a, b) => a.stock - b.stock);
-  if (value === "stockHighLow") products.sort((a, b) => b.stock - a.stock);
+  if (value === "az") products.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  if (value === "za") products.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
+  if (value === "stockLowHigh") products.sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
+  if (value === "stockHighLow") products.sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
 
   showDashboard();
 };
 
-// CATEGORY FILTER
+// --------- CATEGORY FILTER ----------
 window.selectCategory = function (cat) {
   currentCategory = cat;
   showDashboard();
 };
 
-// FILTER FUNCTION
 function filteredProducts() {
   if (currentCategory === "all") return products;
   return products.filter(p => p.category === currentCategory);
 }
 
-// DASHBOARD
+// --------- SHOW DASHBOARD ----------
 window.showDashboard = function () {
   const list = filteredProducts();
 
-  let totalItems = list.reduce((sum, p) => sum + p.stock, 0);
-  let totalValue = list.reduce((sum, p) => sum + p.stock * p.price, 0);
+  let totalItems = list.reduce((sum, p) => sum + (p.stock || 0), 0);
+  let totalValue = list.reduce((sum, p) => sum + ((p.stock || 0) * (p.price || 0)), 0);
 
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4>Inventory Dashboard</h4>
       <div>
-        <button class="btn btn-secondary me-2" onclick="selectCategory('all')">All</button>
-        <button class="btn btn-secondary me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-        <button class="btn btn-secondary me-2" onclick="selectCategory('utensil')">Utensils</button>
+        <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+        <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+        <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
 
         <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
       </div>
@@ -305,8 +376,8 @@ window.showDashboard = function () {
           <th>Name</th>
           <th>Stock</th>
           <th>Price</th>
+          <th>KG</th>
           <th>Total Value</th>
-          <th>Threshold</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -317,13 +388,108 @@ window.showDashboard = function () {
   renderTable(list);
 };
 
-// AUTO LOGIN
+// --------- SHOW LOW STOCK (stock count based: 0-3) ----------
+window.showLowStock = function () {
+  const lowStock = products.filter(p => (p.stock || 0) <= 3);
+  if (lowStock.length === 0) {
+    alert("✅ All stocks are sufficient!");
+    return;
+  }
+
+  let rows = lowStock.map(p => `
+    <tr>
+      <td>${p.sku ?? ''}</td>
+      <td>${p.name ?? ''}</td>
+      <td class="${stockColor(p.stock ?? 0)} text-center">${p.stock ?? 0}</td>
+      <td>₱${(p.price ?? 0).toFixed(2)}</td>
+      <td>${p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '')}</td>
+      <td>₱${(((p.price || 0) * (p.stock || 0))).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("main").innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>⚠️ Low Stock Products</h4>
+      <div>
+        <button class="btn btn-secondary me-2" onclick="showDashboard()">⬅️ Back</button>
+        <button class="btn btn-primary" onclick="exportCSV()">⬇️ Export CSV</button>
+      </div>
+    </div>
+
+    <table class="table table-striped align-middle">
+      <thead class="table-danger">
+        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>KG</th><th>Total Value</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+};
+
+// --------- EXPORT CSV (includes KG) ----------
+window.exportCSV = function () {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
+
+  // Note: include KG (kg_display) and kg_value
+  const dataLines = products.map(p => {
+    const sku = p.sku ?? '';
+    const name = p.name ?? '';
+    const stock = p.stock ?? 0;
+    const price = (p.price ?? 0).toFixed(2);
+    const kg_display = p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
+    const kg_value = (typeof p.kg_value === 'number') ? p.kg_value.toFixed(3) : '';
+    return `${sku},${name},${stock},${price},${kg_display},${kg_value}`;
+  });
+
+  const header = "SKU,Name,Stock,Price,KG_Display,KG_Value(kg)";
+
+  const previousData = localStorage.getItem("lastExport");
+  let comparisonNotes = "";
+
+  if (previousData) {
+    comparisonNotes = compareExports(previousData, dataLines.join("\n"));
+  } else {
+    comparisonNotes = "📦 First export — no previous data to compare.";
+  }
+
+  localStorage.setItem("lastExport", dataLines.join("\n"));
+
+  const csvContent = "data:text/csv;charset=utf-8," + `Export Date: ${timestamp}\n${comparisonNotes}\n\n${header}\n${dataLines.join("\n")}`;
+
+  // Use blob for better compatibility
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `inventory_${timestamp}.csv`;
+  link.click();
+};
+
+// --------- COMPARE EXPORTS (simple) ----------
+function compareExports(prev, current) {
+  const prevLines = prev.split("\n");
+  const currLines = current.split("\n");
+  const added = currLines.filter(line => !prevLines.includes(line));
+  const removed = prevLines.filter(line => !currLines.includes(line));
+
+  let note = "";
+  if (added.length === 0 && removed.length === 0) {
+    note = "✅ No changes since last export.";
+    alert(note);
+  } else {
+    note = "🔄 Comparison Results:";
+    if (added.length > 0) note += `\n🆕 Added/Changed: ${added.length}`;
+    if (removed.length > 0) note += `\n❌ Removed: ${removed.length}`;
+    alert(`${note}\n\n🆕 Added:\n${added.join("\n")}\n\n❌ Removed:\n${removed.join("\n")}`);
+  }
+  return note;
+}
+
+// AUTO LOGIN CHECK
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadProducts();
 }
-
 </script>
 </body>
 </html>
