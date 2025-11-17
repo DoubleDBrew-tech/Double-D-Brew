@@ -16,9 +16,10 @@
     .login-box h2 { margin-bottom: 20px; color: #6b4226; }
   </style>
 </head>
+
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 <div id="loginForm">
   <div class="login-box">
     <h2>Double'd Brew Login</h2>
@@ -28,20 +29,28 @@
   </div>
 </div>
 
-<!-- INVENTORY APP -->
+<!-- APP -->
 <div id="app">
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Double'd Brew Inventory</a>
-      <div class="collapse navbar-collapse">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link active" href="#" onclick="showDashboard()">Dashboard</a></li>
-        </ul>
+
+      <div class="d-flex ms-auto">
+        <!-- SORTING DROPDOWN -->
+        <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:150px;">
+          <option value="">Sort</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+          <option value="stockLowHigh">Stock Low → High</option>
+          <option value="stockHighLow">Stock High → Low</option>
+        </select>
+
         <button class="btn btn-outline-light me-2" onclick="exportCSV()">Export CSV</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
       </div>
     </div>
   </nav>
+
   <div class="container py-4" id="main"></div>
 </div>
 
@@ -51,7 +60,6 @@ import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-// ✅ FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
@@ -64,8 +72,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
+let currentCategory = "all"; // new filter value
 
-// ✅ SIMPLE LOGIN
 window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -86,7 +94,7 @@ window.logout = function () {
   document.getElementById("loginForm").style.display = "flex";
 };
 
-// ✅ LOAD PRODUCTS
+// LOAD PRODUCTS
 async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
   products = [];
@@ -94,9 +102,9 @@ async function loadProducts() {
     products.push({ id: docu.id, ...docu.data() });
   });
   showDashboard();
-};
+}
 
-// ✅ ADD PRODUCT
+// ADD PRODUCT
 window.addProduct = function () {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
@@ -104,9 +112,17 @@ window.addProduct = function () {
       <input class="form-control mb-2" name="sku" placeholder="SKU" required>
       <input class="form-control mb-2" name="name" placeholder="Name" required>
       <input class="form-control mb-2" name="description" placeholder="Description">
+
+      <select class="form-control mb-2" name="category" required>
+        <option value="">Select Category</option>
+        <option value="ingredient">Ingredient</option>
+        <option value="utensil">Utensil</option>
+      </select>
+
       <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" required>
       <input class="form-control mb-2" name="stock" placeholder="Stock" type="number" required>
       <input class="form-control mb-2" name="reorder" placeholder="Reorder Threshold" type="number" required>
+
       <button class="btn btn-success">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
@@ -117,32 +133,44 @@ window.addProduct = function () {
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
+
   const newP = {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
+    category: form.category.value,
     price: parseFloat(form.price.value),
     stock: parseInt(form.stock.value),
     reorder_threshold: parseInt(form.reorder.value)
   };
+
   await addDoc(collection(db, "products"), newP);
-  alert("✅ Product added successfully!");
+  alert("✅ Product added!");
   loadProducts();
 }
 
-// ✅ EDIT PRODUCT
+// EDIT PRODUCT
 window.editProduct = function (id) {
   const p = products.find(x => x.id === id);
+
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
     <form id="editForm">
       <input type="hidden" name="id" value="${p.id}">
       <input class="form-control mb-2" name="sku" value="${p.sku}" required>
       <input class="form-control mb-2" name="name" value="${p.name}" required>
+
       <input class="form-control mb-2" name="description" value="${p.description || ""}">
+      
+      <select class="form-control mb-2" name="category" required>
+        <option value="ingredient" ${p.category==="ingredient"?"selected":""}>Ingredient</option>
+        <option value="utensil" ${p.category==="utensil"?"selected":""}>Utensil</option>
+      </select>
+
       <input class="form-control mb-2" name="price" value="${p.price}" type="number" step="0.01" required>
       <input class="form-control mb-2" name="stock" value="${p.stock}" type="number" required>
       <input class="form-control mb-2" name="reorder" value="${p.reorder_threshold}" type="number" required>
+
       <button class="btn btn-primary">Update Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
@@ -153,129 +181,48 @@ window.editProduct = function (id) {
 async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
+
   const ref = doc(db, "products", form.id.value);
   await updateDoc(ref, {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
+    category: form.category.value,
     price: parseFloat(form.price.value),
     stock: parseInt(form.stock.value),
     reorder_threshold: parseInt(form.reorder.value)
   });
-  alert("✅ Product updated!");
+
+  alert("Updated!");
   loadProducts();
 }
 
-// ✅ DELETE PRODUCT
+// DELETE
 window.deleteProduct = async function (id) {
-  if (confirm("⚠️ Delete this product?")) {
+  if (confirm("Delete this product?")) {
     await deleteDoc(doc(db, "products", id));
-    alert("🗑️ Product deleted.");
     loadProducts();
   }
 };
 
-// ✅ ADJUST STOCK
+// STOCK ADJUST
 window.adjustStock = async function (id) {
   const p = products.find(x => x.id === id);
-  const adjust = parseInt(prompt(`Adjust stock for ${p.name}: (current: ${p.stock})`, "0"));
-  if (isNaN(adjust)) return alert("Invalid number!");
+  const adjust = parseInt(prompt(`Adjust stock for ${p.name}:`, "0"));
+  if (isNaN(adjust)) return;
   const ref = doc(db, "products", id);
   await updateDoc(ref, { stock: p.stock + adjust });
-  alert("✅ Stock adjusted!");
   loadProducts();
 };
 
-// ✅ EXPORT CSV (with time + comparison inside file)
-window.exportCSV = function () {
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
-
-  const dataLines = products.map(p => `${p.sku},${p.name},${p.stock},${p.price},${p.reorder_threshold}`);
-  const header = "SKU,Name,Stock,Price,Reorder Threshold";
-
-  const previousData = localStorage.getItem("lastExport");
-  let comparisonNotes = "";
-
-  if (previousData) {
-    comparisonNotes = compareExports(previousData, dataLines.join("\n"));
-  } else {
-    comparisonNotes = "📦 First export — no previous data to compare.";
-  }
-
-  localStorage.setItem("lastExport", dataLines.join("\n"));
-
-  const csvContent = "data:text/csv;charset=utf-8,"
-    + `Export Date: ${timestamp}\n${comparisonNotes}\n\n${header}\n${dataLines.join("\n")}`;
-
-  const link = document.createElement("a");
-  link.href = encodeURI(csvContent);
-  link.download = `inventory_${timestamp}.csv`;
-  link.click();
-};
-
-// ✅ Compare function (for alerts + CSV notes)
-function compareExports(prev, current) {
-  const prevLines = prev.split("\n");
-  const currLines = current.split("\n");
-  const added = currLines.filter(line => !prevLines.includes(line));
-  const removed = prevLines.filter(line => !currLines.includes(line));
-
-  let note = "";
-  if (added.length === 0 && removed.length === 0) {
-    note = "✅ No changes since last export.";
-    alert(note);
-  } else {
-    note = "🔄 Comparison Results:";
-    if (added.length > 0) note += `\n🆕 Added/Changed: ${added.length}`;
-    if (removed.length > 0) note += `\n❌ Removed: ${removed.length}`;
-    alert(`${note}\n\n🆕 Added:\n${added.join("\n")}\n\n❌ Removed:\n${removed.join("\n")}`);
-  }
-  return note;
+// STOCK COLOR FUNCTION
+function stockColor(stock) {
+  if (stock <= 3) return "bg-danger text-white fw-bold";
+  if (stock <= 6) return "bg-warning fw-bold";
+  return "bg-success text-white fw-bold";
 }
 
-// ✅ SHOW DASHBOARD (with Add Product + Low Stock buttons only)
-// ✅ SHOW DASHBOARD (with Search, Add Product, Export, and Logout)
-window.showDashboard = function () {
-  let totalItems = products.reduce((sum, p) => sum + p.stock, 0);
-  let totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
-
-  // render dashboard header
-  document.getElementById("main").innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4>Inventory Dashboard</h4>
-      <div>
-        <button class="btn btn-secondary me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-        <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
-        <button class="btn btn-success ms-2" onclick="exportCSV()">⬇️ Export CSV</button>
-        <button class="btn btn-danger ms-2" onclick="logout()">🚪 Logout</button>
-      </div>
-    </div>
-
-    <!-- Search Bar -->
-    <div class="input-group mb-3">
-      <span class="input-group-text">🔍</span>
-      <input type="text" id="searchInput" class="form-control" placeholder="Search by SKU or Name..." onkeyup="filterProducts()">
-    </div>
-
-    <div class="row mb-4">
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Products</h5><h2>${products.length}</h2></div></div>
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Inventory Value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
-    </div>
-
-    <table class="table table-striped align-middle" id="productTable">
-      <thead class="table-dark">
-        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="productTableBody"></tbody>
-    </table>
-  `;
-
-  renderTable(products);
-};
-
-// ✅ RENDER TABLE (separated for reusability)
+// RENDER TABLE
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
@@ -284,9 +231,15 @@ function renderTable(list) {
     <tr>
       <td>${p.sku}</td>
       <td>${p.name}</td>
-      <td>${p.stock}</td>
+
+      <td class="${stockColor(p.stock)} text-center">${p.stock}</td>
+
       <td>₱${p.price.toFixed(2)}</td>
+
+      <td>₱${(p.stock * p.price).toFixed(2)}</td>
+
       <td>${p.reorder_threshold}</td>
+
       <td>
         <button class="btn btn-sm btn-outline-success" onclick="adjustStock('${p.id}')">Adjust</button>
         <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
@@ -296,55 +249,81 @@ function renderTable(list) {
   `).join("");
 }
 
-// ✅ FILTER PRODUCTS (for search)
-window.filterProducts = function () {
-  const query = document.getElementById("searchInput").value.toLowerCase();
-  const filtered = products.filter(p =>
-    p.sku.toLowerCase().includes(query) ||
-    p.name.toLowerCase().includes(query)
-  );
-  renderTable(filtered);
+// SORTING
+window.sortProducts = function () {
+  const value = document.getElementById("sortSelect").value;
+
+  if (value === "az") products.sort((a, b) => a.name.localeCompare(b.name));
+  if (value === "za") products.sort((a, b) => b.name.localeCompare(a.name));
+  if (value === "stockLowHigh") products.sort((a, b) => a.stock - b.stock);
+  if (value === "stockHighLow") products.sort((a, b) => b.stock - a.stock);
+
+  showDashboard();
 };
 
-// ✅ SHOW LOW STOCK PRODUCTS
-window.showLowStock = function () {
-  const lowStock = products.filter(p => p.stock <= p.reorder_threshold);
-  if (lowStock.length === 0) {
-    alert("✅ All stocks are sufficient!");
-    return;
-  }
+// CATEGORY FILTER
+window.selectCategory = function (cat) {
+  currentCategory = cat;
+  showDashboard();
+};
 
-  let rows = lowStock.map(p => `
-    <tr>
-      <td>${p.sku}</td>
-      <td>${p.name}</td>
-      <td>${p.stock}</td>
-      <td>₱${p.price.toFixed(2)}</td>
-      <td>${p.reorder_threshold}</td>
-    </tr>
-  `).join("");
+// FILTER FUNCTION
+function filteredProducts() {
+  if (currentCategory === "all") return products;
+  return products.filter(p => p.category === currentCategory);
+}
+
+// DASHBOARD
+window.showDashboard = function () {
+  const list = filteredProducts();
+
+  let totalItems = list.reduce((sum, p) => sum + p.stock, 0);
+  let totalValue = list.reduce((sum, p) => sum + p.stock * p.price, 0);
 
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4>⚠️ Low Stock Products</h4>
-      <button class="btn btn-secondary" onclick="showDashboard()">⬅️ Back</button>
+      <h4>Inventory Dashboard</h4>
+      <div>
+        <button class="btn btn-secondary me-2" onclick="selectCategory('all')">All</button>
+        <button class="btn btn-secondary me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+        <button class="btn btn-secondary me-2" onclick="selectCategory('utensil')">Utensils</button>
+
+        <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
+      </div>
     </div>
 
-    <table class="table table-striped align-middle">
-      <thead class="table-danger">
-        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Threshold</th></tr>
+    <div class="row mb-4">
+      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Products</h5><h2>${list.length}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
+    </div>
+
+    <table class="table table-striped align-middle" id="productTable">
+      <thead class="table-dark">
+        <tr>
+          <th>SKU</th>
+          <th>Name</th>
+          <th>Stock</th>
+          <th>Price</th>
+          <th>Total Value</th>
+          <th>Threshold</th>
+          <th>Actions</th>
+        </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody id="productTableBody"></tbody>
     </table>
   `;
+
+  renderTable(list);
 };
 
-// ✅ AUTO LOGIN CHECK
+// AUTO LOGIN
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadProducts();
 }
+
 </script>
 </body>
 </html>
