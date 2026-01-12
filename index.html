@@ -490,7 +490,6 @@ window.exportCSV = function () {
     const name = p.name ?? '';
     const stock = p.stock ?? 0;
     const pieces = stock * 100;
-    const pieces = (category === "Utensils") ? (stock * 100) : "";
     const kg_display = p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
     const kg_value = (typeof p.kg_value === 'number') ? p.kg_value.toFixed(3) : '';
     return `${sku},${name},${stock},${pieces},${price},${kg_display},${kg_value}`;
