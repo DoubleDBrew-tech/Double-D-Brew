@@ -61,7 +61,7 @@ import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-// FIREBASE CONFIG
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
@@ -74,7 +74,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
-let currentCategory = "all"; // filter
+let currentCategory = "all"; // pang filter
 let sortMode = ""; // current sort (az, za, stockLowHigh, stockHighLow)
 let searchQuery = ""; // current search string
 
@@ -135,7 +135,7 @@ function parseKgInput(input) {
   return { kg_value, kg_display };
 }
 
-// LOAD PRODUCTS
+// LOAD PRO
 async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
   products = [];
@@ -145,7 +145,7 @@ async function loadProducts() {
   showDashboard();
 }
 
-// ADD PRODUCT
+// ADD PRO
 window.addProduct = function () {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
@@ -193,7 +193,7 @@ async function saveNewProduct(e) {
   loadProducts();
 }
 
-// EDIT PRODUCT
+// EDIT PRO
 window.editProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
   const kg_display = p.kg || (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
@@ -254,13 +254,16 @@ window.deleteProduct = async function (id) {
   }
 };
 
-// ADJUST STOCK
-window.adjustStock = async function (id) {
+// BASTA ADJUSTMENT
+window.applyAdjust = async function (id, value) {
   const p = products.find(x => x.id === id);
-  const adjust = parseInt(prompt(`Adjust stock for ${p.name} (current: ${p.stock}):`, "0"));
+  const adjust = parseInt(value);
+
   if (isNaN(adjust)) return alert("Invalid number!");
+
   const ref = doc(db, "products", id);
   await updateDoc(ref, { stock: (p.stock || 0) + adjust });
+
   loadProducts();
 };
 
@@ -327,7 +330,29 @@ function renderTable(list) {
         <td>₱${totalValue}</td>
 
         <td>
-          <button class="btn btn-sm btn-outline-success" onclick="adjustStock('${p.id}')">Adjust</button>
+          <div class="dropdown">
+  <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+    Adjust
+  </button>
+
+  <ul class="dropdown-menu p-2" style="min-width: 150px;">
+    <li class="fw-bold px-2">Quick Adjust</li>
+    <li class="d-flex justify-content-between px-2 my-1">
+      <button class="btn btn-sm btn-danger" onclick="applyAdjust('${p.id}', -3)">-3</button>
+      <button class="btn btn-sm btn-danger" onclick="applyAdjust('${p.id}', -2)">-2</button>
+      <button class="btn btn-sm btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
+      <button class="btn btn-sm btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
+      <button class="btn btn-sm btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
+      <button class="btn btn-sm btn-success" onclick="applyAdjust('${p.id}', 3)">+3</button>
+    </li>
+
+    <li class="fw-bold px-2 mt-2">Custom</li>
+    <li class="px-2">
+      <input type="number" id="custom-${p.id}" class="form-control form-control-sm mb-2" placeholder="Enter number">
+      <button class="btn btn-sm btn-primary w-100" onclick="applyAdjust('${p.id}', document.getElementById('custom-${p.id}').value)">Apply</button>
+    </li>
+  </ul>
+</div>
           <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
           <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">Delete</button>
         </td>
