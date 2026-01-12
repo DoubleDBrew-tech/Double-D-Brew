@@ -311,6 +311,7 @@ function renderTable(list) {
   tbody.innerHTML = list.map(p => {
     const price = (typeof p.price === 'number') ? p.price : 0;
     const stock = (typeof p.stock === 'number') ? p.stock : 0;
+    const pieces = stock * 100;
     const totalValue = (price * stock).toFixed(2);
     const kgDisplay = p.kg ? p.kg : (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
 
@@ -320,6 +321,8 @@ function renderTable(list) {
         <td>${p.name ?? ''}</td>
 
         <td class="${stockColor(stock)} text-center">${stock}</td>
+
+        <td>${pieces.toLocaleString()} pcs</td>
 
         <td>₱${price.toFixed(2)}</td>
 
@@ -418,6 +421,7 @@ window.showDashboard = function () {
           <th>SKU</th>
           <th>Name</th>
           <th>Stock</th>
+          <th>Pieces</th>
           <th>Price</th>
           <th>KG</th>
           <th>Total Value</th>
@@ -480,6 +484,7 @@ window.exportCSV = function () {
     const sku = p.sku ?? '';
     const name = p.name ?? '';
     const stock = p.stock ?? 0;
+    const pieces = stock * 100;
     const price = (p.price ?? 0).toFixed(2);
     const kg_display = p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
     const kg_value = (typeof p.kg_value === 'number') ? p.kg_value.toFixed(3) : '';
