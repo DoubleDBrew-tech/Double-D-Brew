@@ -76,7 +76,7 @@ const db = getFirestore(app);
 let products = [];
 let currentCategory = "all"; // pang filter
 let sortMode = ""; // current sort (az, za, stockLowHigh, stockHighLow)
-let searchQuery = ""; // current search string
+let searchQuery = ""; // search string
 
 window.login = function () {
   const email = document.getElementById("username").value.trim();
@@ -254,7 +254,7 @@ window.deleteProduct = async function (id) {
   }
 };
 
-// BASTA ADJUSTMENT
+// Adjust
 window.applyAdjust = async function (id, value) {
   const p = products.find(x => x.id === id);
   const adjust = parseInt(value);
@@ -267,19 +267,19 @@ window.applyAdjust = async function (id, value) {
   loadProducts();
 };
 
-// STOCK COLOR
+// Stock Color
 function stockColor(stock) {
   if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
   if ((stock || 0) <= 6) return "bg-warning fw-bold";
   return "bg-success text-white fw-bold";
 }
 
-// APPLY FILTERS + SORT + RENDER
+// APPLY F S R
 function applyFiltersAndRender() {
   // category filter
   let list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
 
-  // search filter across multiple fields
+  // search filter
   const q = (searchQuery || "").toString().trim().toLowerCase();
   if (q !== "") {
     list = list.filter(p => {
@@ -303,7 +303,7 @@ function applyFiltersAndRender() {
   renderTable(list);
 }
 
-// RENDER TABLE
+// Render Tabler
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
@@ -369,26 +369,26 @@ function renderTable(list) {
   }).join("");
 }
 
-// SORTING (sets mode then apply)
+// Sorting
 window.sortProducts = function () {
   sortMode = document.getElementById("sortSelect").value || "";
   applyFiltersAndRender();
 };
 
-// CATEGORY SELECT
+// Select Category
 window.selectCategory = function (cat) {
   currentCategory = cat;
   // clear search when switching category? (keeping it so user can combine)
   applyFiltersAndRender();
 };
 
-// SEARCH (multi-field)
+// Search
 window.filterProducts = function () {
   searchQuery = document.getElementById("searchInput").value;
   applyFiltersAndRender();
 };
 
-// DASHBOARD
+// Dashboard
 window.showDashboard = function () {
   const list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
   let totalItems = list.reduce((sum, p) => sum + (p.stock || 0), 0);
@@ -437,13 +437,13 @@ window.showDashboard = function () {
     </table>
   `;
 
-  // restore search input value if any and apply filters
+  // SearchI & FilterRender
   const input = document.getElementById("searchInput");
   if (input) input.value = searchQuery || "";
   applyFiltersAndRender();
 };
 
-// SHOW LOW STOCK
+// LOW STOCK
 window.showLowStock = function () {
   const lowStock = products.filter(p => (p.stock || 0) <= 3);
   if (lowStock.length === 0) {
@@ -485,14 +485,31 @@ window.exportCSV = function () {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:T]/g, "-").split(".")[0];
 
-  const dataLines = products.map(p => {
-    const sku = p.sku ?? '';
-    const name = p.name ?? '';
-    const stock = p.stock ?? 0;
-    const pieces = stock * 100;
-    const kg_display = p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
-    const kg_value = (typeof p.kg_value === 'number') ? p.kg_value.toFixed(3) : '';
-    return `${sku},${name},${stock},${pieces},${price},${kg_display},${kg_value}`;
+  let csv = "SKU,Name,Category,Stock,Pieces,Price,KG,Total Value\n";
+
+  products.forEach(p => {
+    const sku = p.sku ?? "";
+    const name = p.name ?? "";
+    const category = (p.category ?? "").toLowerCase(); // normalize
+
+    const stock = Number(p.stock ?? 0);
+    const price = Number(p.price ?? 0);
+
+    // Utensils lang may pieces
+    const pieces = (category === "utensil") ? (stock * 100) : "";
+
+    // ✔ KG format
+    const kg = p.kg
+      ? p.kg
+      : (p.kg_value
+          ? (p.kg_value < 1
+              ? `${Math.round(p.kg_value * 1000)} g`
+              : `${+p.kg_value.toFixed(3)} kg`)
+          : "");
+
+    const totalValue = (stock * price).toFixed(2);
+
+    csv += `${sku},${name},${category},${stock},${pieces},${price},${kg},${totalValue}\n`;
   });
 
   const header = "SKU,Name,Stock,Pieces,Price,KG_Display,KG_Value(kg)";
@@ -516,7 +533,7 @@ window.exportCSV = function () {
   link.click();
 };
 
-// COMPARE EXPORTS
+// Compare CSV
 function compareExports(prev, current) {
   const prevLines = prev.split("\n");
   const currLines = current.split("\n");
@@ -536,12 +553,15 @@ function compareExports(prev, current) {
   return note;
 }
 
-// AUTO LOGIN
+// Auto Login
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadProducts();
 }
 </script>
+  <!-- BootStrapJS (para sa adjust)-->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
