@@ -6,15 +6,178 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #f8f9fa; }
-    #app { display: none; }
-    #loginForm { height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .login-box {
-      background: #fff; padding: 30px; border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 350px; text-align: center;
-    }
-    .login-box h2 { margin-bottom: 20px; color: #6b4226; }
-    .kg-small { font-size: 0.85rem; color: #6c757d; display:block; }
+/* ✨ MANGO THEME UI */
+/* MAIN BACKGROUND */
+body {
+  background: #fff8e1; /* light mango cream */
+  font-family: "Poppins", sans-serif;
+}
+
+/* LOGIN SECTION WITH FLOATING MANGO ANIMATION */
+#loginForm {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+
+  /* Mango gradient + mango image background */
+  background: linear-gradient(135deg, #ffcc4d, #fff3c4),
+              url('https://images.unsplash.com/photo-1611078486246-3bb14edc8c7b?auto=format&fit=crop&w=800&q=80') no-repeat center center;
+  background-size: cover;
+}
+
+/* Semi-transparent overlay to make login box pop */
+#loginForm::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 204, 77, 0.3); /* translucent mango overlay */
+  z-index: 1;
+}
+
+/* Floating mango slices container */
+#loginForm .mango-slice {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: url('https://images.emojiterra.com/google/noto-emoji/unicode-15/color/512px/1f96d.png') no-repeat center center;
+  background-size: contain;
+  animation: floatMango 10s linear infinite;
+  opacity: 0.8;
+}
+
+/* Different start positions */
+#loginForm .mango-slice:nth-child(1) { left: 10%; animation-duration: 12s; }
+#loginForm .mango-slice:nth-child(2) { left: 30%; animation-duration: 10s; animation-delay: 2s; }
+#loginForm .mango-slice:nth-child(3) { left: 50%; animation-duration: 14s; animation-delay: 1s; }
+#loginForm .mango-slice:nth-child(4) { left: 70%; animation-duration: 11s; animation-delay: 3s; }
+#loginForm .mango-slice:nth-child(5) { left: 90%; animation-duration: 13s; animation-delay: 0s; }
+
+/* Mango float animation */
+@keyframes floatMango {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translateY(50vh) rotate(180deg); opacity: 0.9; }
+  100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+}
+
+/* Login box stays above overlay and mango slices */
+.login-box {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 248, 0.95);
+  padding: 35px;
+  border-radius: 18px;
+  border: 2px solid #f7b731; /* mango yellow border */
+  box-shadow: 0 6px 18px rgba(255, 179, 0, 0.25);
+  text-align: center;
+  min-width: 350px;
+}
+
+.login-box h2 {
+  font-weight: 700;
+  color: #d68b00; /* deep mango orange */
+}
+
+
+/* NAVBAR */
+.navbar {
+  background: #f4a300 !important; /* ripe mango orange */
+  border-bottom: 3px solid #ffd36b;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff8e1 !important;
+}
+
+/* BUTTONS */
+.btn-primary {
+  background: #ffb300 !important; /* mango */
+  border: none;
+}
+.btn-primary:hover {
+  background: #e79d00 !important;
+}
+
+.btn-warning {
+  background: #ffc947 !important;
+  border: none;
+}
+.btn-warning:hover {
+  background: #f7b600 !important;
+}
+
+.btn-secondary {
+  background: #ffe08a !important;
+  color: #7a5200 !important;
+  border: none;
+}
+.btn-secondary:hover {
+  background: #ffd369 !important;
+}
+
+/* DASHBOARD CARDS */
+.card {
+  background: #fffbe7;
+  border: 1px solid #ffc447;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(255, 179, 0, 0.15);
+}
+
+/* TABLE */
+.table-dark {
+  background: #ffb300 !important;
+  border-color: #ffb300 !important;
+}
+
+.table-striped tbody tr:nth-child(odd) {
+  background: #fff7d1;
+}
+.table-striped tbody tr:nth-child(even) {
+  background: #fff2bd;
+}
+
+.table-striped tbody tr:hover {
+  background: #fff0a3; /* soft mango yellow on hover */
+}
+ 
+ body #app {
+  background: #fff8e1; /* mango cream */
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+#app .mango-slice {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: url('https://images.emojiterra.com/google/noto-emoji/unicode-15/color/512px/1f96d.png') no-repeat center center;
+  background-size: contain;
+  animation: floatMangoDashboard 15s linear infinite;
+  opacity: 0.6;
+}
+
+/* Different positions for slices */
+#app .mango-slice:nth-child(1) { left: 5%; animation-delay: 0s; }
+#app .mango-slice:nth-child(2) { left: 25%; animation-delay: 3s; }
+#app .mango-slice:nth-child(3) { left: 50%; animation-delay: 1s; }
+#app .mango-slice:nth-child(4) { left: 70%; animation-delay: 4s; }
+#app .mango-slice:nth-child(5) { left: 90%; animation-delay: 2s; }
+
+@keyframes floatMangoDashboard {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translateY(50vh) rotate(180deg); opacity: 0.8; }
+  100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+}
+
+
   </style>
 </head>
 
@@ -22,6 +185,12 @@
 
 <!-- LOGIN -->
 <div id="loginForm">
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  
   <div class="login-box">
     <h2>Double'd Brew Login</h2>
     <input type="text" id="username" class="form-control mb-2" placeholder="Username" required>
@@ -32,6 +201,12 @@
 
 <!-- APP -->
 <div id="app">
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Double'd Brew Inventory</a>
@@ -48,6 +223,21 @@
 
         <button class="btn btn-outline-light me-2" onclick="exportCSV()">Export CSV</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
+		<div class="dropdown ms-2">
+  <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
+    ⋮
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsMenuBtn">
+    <li>
+      <button class="dropdown-item" id="toggleAnimationBtn" onclick="toggleAnimation()">
+        🥭 Turn Off Mango Animation
+      </button>
+    </li>
+    <!-- You can add more settings here later -->
+  </ul>
+</div>
+
+
       </div>
     </div>
   </nav>
@@ -442,6 +632,33 @@ window.showDashboard = function () {
   if (input) input.value = searchQuery || "";
   applyFiltersAndRender();
 };
+
+// FOR MANGO ANIMATION BUTTON OFF AND
+let mangoAnimationOn = true; // default is ON
+
+window.toggleAnimation = function() {
+  mangoAnimationOn = !mangoAnimationOn; // switch state
+
+  const slices = document.querySelectorAll('#app .mango-slice');
+  slices.forEach(slice => {
+if (mangoAnimationOn) {
+  slice.style.display = 'block';
+  slice.style.animationPlayState = 'running'; // run animation
+} else {
+  slice.style.display = 'none'; // hide slice completely
+}
+
+  });
+
+  // Update button text
+  const btn = document.getElementById('toggleAnimationBtn');
+  if (btn) {
+    btn.textContent = mangoAnimationOn 
+      ? '🥭 Turn Off Mango Animation' 
+      : '🥭 Turn On Mango Animation';
+  }
+};
+
 
 // LOW STOCK
 window.showLowStock = function () {
