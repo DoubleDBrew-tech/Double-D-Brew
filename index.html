@@ -145,6 +145,7 @@ body {
 .table-striped tbody tr:hover {
   background: #fff0a3; /* soft mango yellow on hover */
 }
+
  
  body #app {
   background: #fff8e1; /* mango cream */
@@ -197,6 +198,27 @@ body {
     <input type="password" id="password" class="form-control mb-3" placeholder="Password" required>
     <button class="btn btn-primary w-100" onclick="login()">Login</button>
   </div>
+</div>
+
+<!-- WELCOME PAGE -->
+<div id="welcomePage" style="
+  display: none;
+  height: 100vh;
+  background: #fff8e1;
+  text-align: center;
+  padding-top: 20vh;
+  font-family: Poppins;
+">
+  <h1 style="color:#d68b00; font-size: 50px; font-weight: 800;">
+    Welcome to Double'd Brew! 🥭
+  </h1>
+  <p style="font-size: 20px; margin-top: 10px;">
+    Preparing your inventory dashboard...
+  </p>
+
+  <button class="btn btn-primary mt-4" onclick="goToDashboard()">
+    Continue
+  </button>
 </div>
 
 <!-- APP -->
@@ -275,8 +297,13 @@ window.login = function () {
   if (email === "admin" && password === "123") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    loadProducts();
+    document.getElementById("welcomePage").style.display = "block";
+
+    // Optional auto-continue after 10 seconds
+    setTimeout(() => {
+      goToDashboard();
+    }, 10000);
+
   } else {
     alert("❌ Invalid username or password!");
   }
@@ -287,6 +314,14 @@ window.logout = function () {
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
 };
+
+// Welcome Page
+window.goToDashboard = function () {
+  document.getElementById("welcomePage").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadProducts();
+};
+
 
 // KG PARSING UTIL
 function parseKgInput(input) {
