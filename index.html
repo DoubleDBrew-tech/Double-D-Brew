@@ -732,7 +732,6 @@ window.showLowStock = function () {
   `;
 };
 
-// EXPORT CSV WITH STOCK COMPARISON + DATE FILENAME
 window.exportCSV = function () {
     const headers = [
         "SKU",
@@ -751,41 +750,36 @@ window.exportCSV = function () {
 
     let csv = headers.join(",") + "\n";
 
-    // --- Load previous data from localStorage ---
+    // --- Load previous data ---
     let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
 
     products.forEach(p => {
         // --- Consistent KG ---
-        let kgFormatted = "";
-        let kgValue = p.kg_value ?? "";
+        let kgFormatted = p.kg_value ? p.kg_value + " kg" : (p.kg || "");
 
-        if (p.kg_value) {
-            kgFormatted = p.kg_value + " kg";
-        } else if (p.kg) {
-            kgFormatted = p.kg;
+        let newStock = Number(p.stock);
+        let oldStock = "";
+
+        // Only use old stock if it was actually saved before
+        if (previousData[p.sku] && previousData[p.sku].stock !== undefined) {
+            oldStock = Number(previousData[p.sku].stock);
         }
 
-        // --- Previous stock lookup ---
-        let oldStock = previousData[p.sku]?.stock ?? "";
-        let newStock = Number(p.stock);
-        let difference = oldStock !== "" ? newStock - Number(oldStock) : "";
+        let difference = oldStock !== "" ? (newStock - oldStock) : "";
 
-        // --- Pieces only for utensils ---
-        const pieces = p.category?.toLowerCase() === "utensils"
-            ? (Number(p.stock) * 100)
+        // For utensils, calculate pieces
+        const pieces = p.category?.toLowerCase() === "utensil"
+            ? newStock * 100
             : "";
 
-        // --- Total Value ---
-        const totalValue = (newStock * Number(p.price || 0)) || 0;
+        let totalValue = newStock * Number(p.price || 0);
 
-        // Escape commas/quotes
-        const safe = val => {
-            if (val === undefined || val === null) return "";
-            val = String(val);
-            if (val.includes(",") || val.includes("\"")) {
-                return `"${val.replace(/"/g, '""')}"`;
-            }
-            return val;
+        const safe = v => {
+            if (v === undefined || v === null) return "";
+            v = String(v);
+            return v.includes(",") || v.includes("\"")
+                ? `"${v.replace(/"/g, '""')}"`
+                : v;
         };
 
         csv += [
@@ -794,7 +788,7 @@ window.exportCSV = function () {
             safe(p.description),
             safe(p.category),
             safe(kgFormatted),
-            safe(kgValue),
+            safe(p.kg_value),
             safe(p.price),
             safe(oldStock),
             safe(newStock),
@@ -804,29 +798,28 @@ window.exportCSV = function () {
         ].join(",") + "\n";
     });
 
-    // --- Save current inventory as previous for next time ---
-    let saveObj = {};
+    // --- SAVE CURRENT AS PREVIOUS (correct timing!) ---
+    let snapshot = {};
     products.forEach(p => {
-        saveObj[p.sku] = { stock: Number(p.stock) };
+        snapshot[p.sku] = {
+            stock: Number(p.stock)
+        };
     });
-    localStorage.setItem("previous_inventory", JSON.stringify(saveObj));
+    localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
 
-    // --- Date filename ---
-    const today = new Date().toISOString().split("T")[0]; 
+    // --- Filename ---
+    const today = new Date().toISOString().split("T")[0];
     const filename = `inventory (${today}).csv`;
 
-    // Download CSV
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
-    link.href = url;
+
+    link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
+};
 
-    URL.revokeObjectURL(url);
-}
-
+// Compare Exports
 function normalizeRow(row) {
     let cols = row.split(",").map(c => c.trim().replace(/"/g, ""));
 
