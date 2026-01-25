@@ -5,6 +5,7 @@
   <title>Double'd Brew Inventory</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
 /* ✨ MANGO THEME UI */
 /* MAIN BACKGROUND */
@@ -243,7 +244,7 @@ body {
           <option value="stockHighLow">Stock High → Low</option>
         </select>
 
-        <button class="btn btn-outline-light me-2" onclick="exportCSV()">Export CSV</button>
+        <button class="btn btn-outline-light me-2" onclick="exportXLSX()">Export XLSX</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
 		<div class="dropdown ms-2">
   <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
@@ -294,7 +295,7 @@ window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  if (email === "admin" && password === "123") {
+  if (email === "admin" && password === "mango") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("welcomePage").style.display = "block";
@@ -719,7 +720,7 @@ window.showLowStock = function () {
       <h4>⚠️ Low Stock Products</h4>
       <div>
         <button class="btn btn-secondary me-2" onclick="showDashboard()">⬅️ Back</button>
-        <button class="btn btn-primary" onclick="exportCSV()">⬇️ Export CSV</button>
+        <button class="btn btn-primary" onclick="exportXLSX()">⬇️ Export XLSX</button>
       </div>
     </div>
 
@@ -732,134 +733,100 @@ window.showLowStock = function () {
   `;
 };
 
-window.exportCSV = function () {
-    const headers = [
-        "SKU",
-        "Name",
-        "Description",
-        "Category",
-        "KG",
-        "KG_Value",
-        "Price",
-        "Old_Stock",
-        "New_Stock",
-        "Difference",
-        "Total_Value",
-        "Pieces"
-    ];
-
-    let csv = headers.join(",") + "\n";
+// Export XLSX
+	window.exportXLSX = function () {
 
     // --- Load previous data ---
     let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
 
+    // Excel worksheet content
+    let sheetData = [
+        [
+            "SKU", "Name", "Description", "Category", "KG", "KG_Value",
+            "Price", "Old_Stock", "New_Stock", "Difference", "Total_Value", "Pieces"
+        ]
+    ];
+
+    // Prepare rows
     products.forEach(p => {
-        // --- Consistent KG ---
+
         let kgFormatted = p.kg_value ? p.kg_value + " kg" : (p.kg || "");
 
         let newStock = Number(p.stock);
-        let oldStock = "";
+        let oldStock = previousData[p.sku]?.stock ?? "";
+        let difference = oldStock !== "" ? (newStock - Number(oldStock)) : "";
 
-        // Only use old stock if it was actually saved before
-        if (previousData[p.sku] && previousData[p.sku].stock !== undefined) {
-            oldStock = Number(previousData[p.sku].stock);
-        }
-
-        let difference = oldStock !== "" ? (newStock - oldStock) : "";
-
-        // For utensils, calculate pieces
         const pieces = p.category?.toLowerCase() === "utensil"
             ? newStock * 100
             : "";
 
         let totalValue = newStock * Number(p.price || 0);
 
-        const safe = v => {
-            if (v === undefined || v === null) return "";
-            v = String(v);
-            return v.includes(",") || v.includes("\"")
-                ? `"${v.replace(/"/g, '""')}"`
-                : v;
-        };
-
-        csv += [
-            safe(p.sku),
-            safe(p.name),
-            safe(p.description),
-            safe(p.category),
-            safe(kgFormatted),
-            safe(p.kg_value),
-            safe(p.price),
-            safe(oldStock),
-            safe(newStock),
-            safe(difference),
-            safe(totalValue),
-            safe(pieces)
-        ].join(",") + "\n";
+        sheetData.push([
+            p.sku,
+            p.name,
+            p.description,
+            p.category,
+            kgFormatted,
+            p.kg_value,
+            p.price,
+            oldStock,
+            newStock,
+            difference,
+            totalValue,
+            pieces
+        ]);
     });
 
-    // --- SAVE CURRENT AS PREVIOUS (correct timing!) ---
+    // Create workbook + sheet
+    let wb = XLSX.utils.book_new();
+    let ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // --- APPLY COLOR FORMATTING ---
+    let rowStart = 2; // since row 1 is header
+
+    products.forEach((p, index) => {
+        let excelRow = rowStart + index;
+
+        let oldStock = previousData[p.sku]?.stock ?? "";
+        let newStock = Number(p.stock);
+        let diff = oldStock !== "" ? (newStock - oldStock) : "";
+
+        let targetCell = `J${excelRow}`; // Difference column
+
+        // Default style
+        let style = {
+            fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } }, // yellow
+            font: { color: { rgb: "000000" } } // black text
+        };
+
+        if (diff > 0) {
+            style.fill.fgColor.rgb = "00FF00"; // GREEN
+        } else if (diff < 0) {
+            style.fill.fgColor.rgb = "FF0000"; // RED
+        }
+
+        if (!ws[targetCell]) ws[targetCell] = { t: "s", v: diff };
+        ws[targetCell].s = style;
+    });
+
+    // Attach sheet
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+
+    // Save as XLSX
+    const today = new Date().toISOString().split("T")[0];
+    const filename = `inventory (${today}).xlsx`;
+
+    XLSX.writeFile(wb, filename);
+
+    // --- SAVE CURRENT SNAPSHOT FOR NEXT COMPARISON ---
     let snapshot = {};
     products.forEach(p => {
-        snapshot[p.sku] = {
-            stock: Number(p.stock)
-        };
+        snapshot[p.sku] = { stock: Number(p.stock) };
     });
     localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
-
-    // --- Filename ---
-    const today = new Date().toISOString().split("T")[0];
-    const filename = `inventory (${today}).csv`;
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
 };
 
-// Compare Exports
-function normalizeRow(row) {
-    let cols = row.split(",").map(c => c.trim().replace(/"/g, ""));
-
-    // Normalize KG/L/ml values → numeric only
-    cols[3] = cols[3].replace(/[^\d.]/g, ""); // KG
-    cols[4] = cols[4].replace(/[^\d.]/g, ""); // KG_Value
-
-    return cols.join(",");
-}
-
-function compareExports(prev, current) {
-    const prevLines = prev.split("\n").map(l => l.trim()).filter(l => l);
-    const currLines = current.split("\n").map(l => l.trim()).filter(l => l);
-
-    const header = prevLines.shift();  
-    currLines.shift();
-
-    const normalizedPrev = prevLines.map(normalizeRow).sort();
-    const normalizedCurr = currLines.map(normalizeRow).sort();
-
-    const prevSet = new Set(normalizedPrev);
-    const currSet = new Set(normalizedCurr);
-
-    const added = normalizedCurr.filter(line => !prevSet.has(line));
-    const removed = normalizedPrev.filter(line => !currSet.has(line));
-
-    let msg = "📊 CSV Comparison:\n";
-
-    if (added.length === 0 && removed.length === 0) {
-        msg += "✅ No changes found.";
-    } else {
-        if (added.length) msg += `\n🟢 Added/Updated: ${added.length}`;
-        if (removed.length) msg += `\n🔴 Removed: ${removed.length}`;
-    }
-
-    alert(msg);
-
-    console.log("🟢 Added:", added);
-    console.log("🔴 Removed:", removed);
-}
 
 
 // Auto Login
