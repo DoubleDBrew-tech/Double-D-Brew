@@ -732,7 +732,7 @@ window.showLowStock = function () {
   `;
 };
 
-	//Export CSV
+// EXPORT CSV WITH STOCK COMPARISON + DATE FILENAME
 window.exportCSV = function () {
     const headers = [
         "SKU",
@@ -742,41 +742,46 @@ window.exportCSV = function () {
         "KG",
         "KG_Value",
         "Price",
-        "Stock",
+        "Old_Stock",
+        "New_Stock",
+        "Difference",
         "Total_Value",
         "Pieces"
     ];
 
     let csv = headers.join(",") + "\n";
 
+    // --- Load previous data from localStorage ---
+    let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
+
     products.forEach(p => {
-
-        // -----------------------------
-        // KG Handling
-        // -----------------------------
+        // --- Consistent KG ---
+        let kgFormatted = "";
         let kgValue = p.kg_value ?? "";
-        let kgFormatted = kgValue ? `${kgValue} kg` : "";
 
-        // -----------------------------
-        // Pieces (Utensils Only)
-        // -----------------------------
-        const pieces =
-            p.category?.toLowerCase() === "utensils"
-                ? Number(p.stock) * 100
-                : "";
+        if (p.kg_value) {
+            kgFormatted = p.kg_value + " kg";
+        } else if (p.kg) {
+            kgFormatted = p.kg;
+        }
 
-        // -----------------------------
-        // Total Value
-        // -----------------------------
-        const totalValue =
-            Number(p.stock) * Number(p.price || 0);
+        // --- Previous stock lookup ---
+        let oldStock = previousData[p.sku]?.stock ?? "";
+        let newStock = Number(p.stock);
+        let difference = oldStock !== "" ? newStock - Number(oldStock) : "";
 
-        // -----------------------------
-        // CSV Safety
-        // -----------------------------
+        // --- Pieces only for utensils ---
+        const pieces = p.category?.toLowerCase() === "utensils"
+            ? (Number(p.stock) * 100)
+            : "";
+
+        // --- Total Value ---
+        const totalValue = (newStock * Number(p.price || 0)) || 0;
+
+        // Escape commas/quotes
         const safe = val => {
             if (val === undefined || val === null) return "";
-            val = String(val).replace(/\n/g, " "); // remove newlines
+            val = String(val);
             if (val.includes(",") || val.includes("\"")) {
                 return `"${val.replace(/"/g, '""')}"`;
             }
@@ -791,11 +796,24 @@ window.exportCSV = function () {
             safe(kgFormatted),
             safe(kgValue),
             safe(p.price),
-            safe(p.stock),
+            safe(oldStock),
+            safe(newStock),
+            safe(difference),
             safe(totalValue),
             safe(pieces)
         ].join(",") + "\n";
     });
+
+    // --- Save current inventory as previous for next time ---
+    let saveObj = {};
+    products.forEach(p => {
+        saveObj[p.sku] = { stock: Number(p.stock) };
+    });
+    localStorage.setItem("previous_inventory", JSON.stringify(saveObj));
+
+    // --- Date filename ---
+    const today = new Date().toISOString().split("T")[0]; 
+    const filename = `inventory (${today}).csv`;
 
     // Download CSV
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -803,11 +821,11 @@ window.exportCSV = function () {
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = "inventory_export.csv";
+    link.download = filename;
     link.click();
 
     URL.revokeObjectURL(url);
-};
+}
 
 function normalizeRow(row) {
     let cols = row.split(",").map(c => c.trim().replace(/"/g, ""));
