@@ -804,25 +804,75 @@ window.exportCSV = function () {
     URL.revokeObjectURL(url);
 }
 
-// Compare CSV
+// Compare CSV (Fixed + Accurate)
 function compareExports(prev, current) {
-  const prevLines = prev.split("\n");
-  const currLines = current.split("\n");
-  const added = currLines.filter(line => !prevLines.includes(line));
-  const removed = prevLines.filter(line => !currLines.includes(line));
+    // Split, trim, remove empty lines
+    const prevLines = prev.split("\n").map(l => l.trim()).filter(l => l !== "");
+    const currLines = current.split("\n").map(l => l.trim()).filter(l => l !== "");
 
-  let note = "";
-  if (added.length === 0 && removed.length === 0) {
-    note = "✅ No changes since last export.";
-    alert(note);
-  } else {
-    note = "🔄 Comparison Results:";
-    if (added.length > 0) note += `\n🆕 Added/Changed: ${added.length}`;
-    if (removed.length > 0) note += `\n❌ Removed: ${removed.length}`;
-    alert(`${note}\n\n🆕 Added:\n${added.join("\n")}\n\n❌ Removed:\n${removed.join("\n")}`);
-  }
-  return note;
+    if (prevLines.length === 0 || currLines.length === 0) {
+        alert("⚠️ One of the CSV files is empty or invalid.");
+        return;
+    }
+
+    // Remove headers
+    const headerPrev = prevLines.shift();
+    const headerCurr = currLines.shift();
+
+    if (headerPrev !== headerCurr) {
+        alert("⚠️ CSV headers do not match. Cannot compare.");
+        return;
+    }
+
+    // Use Sets for fast checking
+    const prevSet = new Set(prevLines);
+    const currSet = new Set(currLines);
+
+    // Added lines (new items or modified values)
+    const added = currLines.filter(line => !prevSet.has(line));
+
+    // Removed lines (items no longer present)
+    const removed = prevLines.filter(line => !currSet.has(line));
+
+    // Detect modified rows based on SKU
+    const modified = [];
+    const getSKU = line => line.split(",")[0]?.replace(/"/g, "");
+
+    removed.forEach(oldLine => {
+        const oldSku = getSKU(oldLine);
+        const newLine = currLines.find(l => getSKU(l) === oldSku);
+        if (newLine) {
+            modified.push({ sku: oldSku, before: oldLine, after: newLine });
+        }
+    });
+
+    let message = "📊 CSV Comparison Results:\n";
+
+    if (added.length === 0 && removed.length === 0) {
+        message += "✅ No changes found.";
+        alert(message);
+        return;
+    }
+
+    if (added.length > 0) {
+        message += `\n🆕 Added or Updated: ${added.length}`;
+    }
+
+    if (removed.length > 0) {
+        message += `\n🗑️ Removed: ${removed.length}`;
+    }
+
+    if (modified.length > 0) {
+        message += `\n✏️ Modified Rows: ${modified.length}`;
+    }
+
+    alert(message);
+
+    console.log("🔍 ADDED:", added);
+    console.log("🗑️ REMOVED:", removed);
+    console.log("✏️ MODIFIED:", modified);
 }
+
 
 // Auto Login
 if (localStorage.getItem("loggedIn") === "true") {
