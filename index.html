@@ -734,12 +734,10 @@ window.showLowStock = function () {
 };
 
 // Export XLSX
-	window.exportXLSX = function () {
+window.exportXLSX = function () {
 
-    // --- Load previous data ---
     let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
 
-    // Excel worksheet content
     let sheetData = [
         [
             "SKU", "Name", "Description", "Category", "KG", "KG_Value",
@@ -747,18 +745,19 @@ window.showLowStock = function () {
         ]
     ];
 
-    // Prepare rows
     products.forEach(p => {
-
-        let kgFormatted = p.kg_value ? p.kg_value + " kg" : (p.kg || "");
-
         let newStock = Number(p.stock);
-        let oldStock = previousData[p.sku]?.stock ?? "";
-        let difference = oldStock !== "" ? (newStock - Number(oldStock)) : "";
+        let oldStock = previousData[p.sku]?.stock;
 
-        const pieces = p.category?.toLowerCase() === "utensil"
-            ? newStock * 100
-            : "";
+        let diff =
+            typeof oldStock === "number"
+                ? newStock - oldStock
+                : 0;
+
+        const pieces =
+            p.category?.toLowerCase() === "utensil"
+                ? newStock * 100
+                : "";
 
         let totalValue = newStock * Number(p.price || 0);
 
@@ -767,66 +766,65 @@ window.showLowStock = function () {
             p.name,
             p.description,
             p.category,
-            kgFormatted,
-            p.kg_value,
-            p.price,
-            oldStock,
+            p.kg || "",
+            p.kg_value || "",
+            p.price || 0,
+            typeof oldStock === "number" ? oldStock : "",
             newStock,
-            difference,
+            diff,
             totalValue,
             pieces
         ]);
     });
 
-    // Create workbook + sheet
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // --- APPLY COLOR FORMATTING ---
-    let rowStart = 2; // since row 1 is header
+    // 🔥 APPLY COLOR FORMATTING
+    let rowStart = 2;
 
     products.forEach((p, index) => {
         let excelRow = rowStart + index;
+        let cell = `J${excelRow}`;
 
-        let oldStock = previousData[p.sku]?.stock ?? "";
+        let oldStock = previousData[p.sku]?.stock;
         let newStock = Number(p.stock);
-        let diff = oldStock !== "" ? (newStock - oldStock) : "";
+        let diff =
+            typeof oldStock === "number"
+                ? newStock - oldStock
+                : 0;
 
-        let targetCell = `J${excelRow}`; // Difference column
-
-        // Default style
         let style = {
-            fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } }, // yellow
-            font: { color: { rgb: "000000" } } // black text
+            fill: { patternType: "solid", fgColor: { rgb: "FFFF99" } }, // YELLOW
+            font: { color: { rgb: "000000" }, bold: true }
         };
 
         if (diff > 0) {
-            style.fill.fgColor.rgb = "00FF00"; // GREEN
+            style.fill.fgColor.rgb = "C6EFCE"; // GREEN
         } else if (diff < 0) {
-            style.fill.fgColor.rgb = "FF0000"; // RED
+            style.fill.fgColor.rgb = "FFC7CE"; // RED
         }
 
-        if (!ws[targetCell]) ws[targetCell] = { t: "s", v: diff };
-        ws[targetCell].s = style;
+        if (!ws[cell]) ws[cell] = {};
+        ws[cell].t = "n";       // ✅ numeric cell
+        ws[cell].v = diff;     // ✅ numeric value
+        ws[cell].s = style;    // ✅ apply style
     });
 
-    // Attach sheet
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
 
-    // Save as XLSX
     const today = new Date().toISOString().split("T")[0];
-    const filename = `inventory (${today}).xlsx`;
+    XLSX.writeFile(wb, `inventory (${today}).xlsx`, {
+        cellStyles: true // ⭐ REQUIRED
+    });
 
-    XLSX.writeFile(wb, filename);
-
-    // --- SAVE CURRENT SNAPSHOT FOR NEXT COMPARISON ---
+    // Save snapshot
     let snapshot = {};
     products.forEach(p => {
         snapshot[p.sku] = { stock: Number(p.stock) };
     });
     localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
 };
-
 
 
 // Auto Login
