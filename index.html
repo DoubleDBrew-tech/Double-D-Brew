@@ -741,18 +741,29 @@ window.exportXLSX = function () {
     let sheetData = [
         [
             "SKU", "Name", "Description", "Category", "KG", "KG_Value",
-            "Price", "Old_Stock", "New_Stock", "Difference", "Total_Value", "Pieces"
+            "Price", "Old Stock", "New Stock", "Stock Change", "Total Value", "Pieces"
         ]
     ];
 
     products.forEach(p => {
+
         let newStock = Number(p.stock);
         let oldStock = previousData[p.sku]?.stock;
 
-        let diff =
-            typeof oldStock === "number"
-                ? newStock - oldStock
-                : 0;
+        let changeText = "— NEW ITEM";
+        let diffValue = 0;
+
+        if (typeof oldStock === "number") {
+            diffValue = newStock - oldStock;
+
+            if (diffValue > 0) {
+                changeText = `+${diffValue} ↑ INCREASE`;
+            } else if (diffValue < 0) {
+                changeText = `${diffValue} ↓ DECREASE`;
+            } else {
+                changeText = `0 — NO CHANGE`;
+            }
+        }
 
         const pieces =
             p.category?.toLowerCase() === "utensil"
@@ -771,7 +782,7 @@ window.exportXLSX = function () {
             p.price || 0,
             typeof oldStock === "number" ? oldStock : "",
             newStock,
-            diff,
+            changeText, // ⭐ CLEAR INDICATOR
             totalValue,
             pieces
         ]);
@@ -780,43 +791,10 @@ window.exportXLSX = function () {
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // 🔥 APPLY COLOR FORMATTING
-    let rowStart = 2;
-
-    products.forEach((p, index) => {
-        let excelRow = rowStart + index;
-        let cell = `J${excelRow}`;
-
-        let oldStock = previousData[p.sku]?.stock;
-        let newStock = Number(p.stock);
-        let diff =
-            typeof oldStock === "number"
-                ? newStock - oldStock
-                : 0;
-
-        let style = {
-            fill: { patternType: "solid", fgColor: { rgb: "FFFF99" } }, // YELLOW
-            font: { color: { rgb: "000000" }, bold: true }
-        };
-
-        if (diff > 0) {
-            style.fill.fgColor.rgb = "C6EFCE"; // GREEN
-        } else if (diff < 0) {
-            style.fill.fgColor.rgb = "FFC7CE"; // RED
-        }
-
-        if (!ws[cell]) ws[cell] = {};
-        ws[cell].t = "n";       // ✅ numeric cell
-        ws[cell].v = diff;     // ✅ numeric value
-        ws[cell].s = style;    // ✅ apply style
-    });
-
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
 
     const today = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(wb, `inventory (${today}).xlsx`, {
-        cellStyles: true // ⭐ REQUIRED
-    });
+    XLSX.writeFile(wb, `inventory (${today}).xlsx`);
 
     // Save snapshot
     let snapshot = {};
@@ -825,6 +803,7 @@ window.exportXLSX = function () {
     });
     localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
 };
+
 
 
 // Auto Login
