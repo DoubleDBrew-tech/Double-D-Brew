@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -372,6 +372,7 @@ async function loadProducts() {
 }
 
 // ADD PRO
+// ADD PRO
 window.addProduct = function () {
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
@@ -386,30 +387,41 @@ window.addProduct = function () {
         <option value="utensil">Utensil</option>
       </select>
 
-      <input class="form-control mb-2" name="kg" placeholder="KG (e.g. 250g, 0.25kg, 1kg)" required>
+      <div class="input-group mb-2">
+        <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity" required>
+        <select class="form-select" name="unit" required>
+          <option value="kg">kg</option>
+          <option value="g">grams</option>
+        </select>
+      </div>
 
-      <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" required>
-      <input class="form-control mb-2" name="stock" placeholder="Stock (units)" type="number" required>
+      <input class="form-control mb-2" name="price" type="number" step="0.01" placeholder="Price" required>
+      <input class="form-control mb-2" name="stock" type="number" placeholder="Stock" required>
 
       <button class="btn btn-success">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
   `;
+
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 };
 
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
-  const kgParsed = parseKgInput(form.kg.value);
+
+  let quantity = parseFloat(form.quantity.value);
+  let unit = form.unit.value;
+  let quantity_value = unit === "g" ? quantity / 1000 : quantity;
 
   const newP = {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
     category: form.category.value,
-    kg: kgParsed.kg_display,
-    kg_value: kgParsed.kg_value,
+    quantity,
+    unit,
+    quantity_value,
     price: parseFloat(form.price.value),
     stock: parseInt(form.stock.value)
   };
@@ -420,26 +432,30 @@ async function saveNewProduct(e) {
 }
 
 // EDIT PRO
+// EDIT PRO
 window.editProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
-  const kg_display = p.kg || (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
 
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
     <form id="editForm">
-      <input type="hidden" name="id" value="${p.id ?? ''}">
+      <input type="hidden" name="id" value="${p.id}">
       <input class="form-control mb-2" name="sku" value="${p.sku ?? ''}" required>
       <input class="form-control mb-2" name="name" value="${p.name ?? ''}" required>
-
       <input class="form-control mb-2" name="description" value="${p.description ?? ''}">
-      
+
       <select class="form-control mb-2" name="category" required>
-        <option value="">Select Category</option>
         <option value="ingredient" ${p.category==="ingredient"?"selected":""}>Ingredient</option>
         <option value="utensil" ${p.category==="utensil"?"selected":""}>Utensil</option>
       </select>
 
-      <input class="form-control mb-2" name="kg" placeholder="KG (e.g. 250g, 0.25kg, 1kg)" value="${kg_display}">
+      <div class="input-group mb-2">
+        <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${p.quantity ?? ''}" required>
+        <select class="form-select" name="unit" required>
+          <option value="kg" ${p.unit==="kg"?"selected":""}>kg</option>
+          <option value="g" ${p.unit==="g"?"selected":""}>grams</option>
+        </select>
+      </div>
 
       <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" required>
       <input class="form-control mb-2" name="stock" value="${p.stock ?? 0}" type="number" required>
@@ -448,22 +464,28 @@ window.editProduct = function (id) {
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
   `;
+
   document.getElementById("editForm").addEventListener("submit", updateProduct);
 };
 
 async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
-  const kgParsed = parseKgInput(form.kg.value);
+
+  let quantity = parseFloat(form.quantity.value);
+  let unit = form.unit.value;
+  let quantity_value = unit === "g" ? quantity / 1000 : quantity;
 
   const ref = doc(db, "products", form.id.value);
+
   await updateDoc(ref, {
     sku: form.sku.value,
     name: form.name.value,
     description: form.description.value,
     category: form.category.value,
-    kg: kgParsed.kg_display,
-    kg_value: kgParsed.kg_value,
+    quantity,
+    unit,
+    quantity_value,
     price: parseFloat(form.price.value),
     stock: parseInt(form.stock.value)
   });
@@ -512,10 +534,9 @@ function applyFiltersAndRender() {
       const name = (p.name ?? "").toString().toLowerCase();
       const sku = (p.sku ?? "").toString().toLowerCase();
       const category = (p.category ?? "").toString().toLowerCase();
-      const kg = (p.kg ?? (p.kg_value ? ((p.kg_value < 1) ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : "")).toString().toLowerCase();
-      const kg_value = (typeof p.kg_value === 'number') ? p.kg_value.toString().toLowerCase() : "";
+      const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
       const stockStr = (p.stock ?? "").toString().toLowerCase();
-      return name.includes(q) || sku.includes(q) || category.includes(q) || kg.includes(q) || kg_value.includes(q) || stockStr.includes(q);
+      return name.includes(q) || sku.includes(q) || category.includes(q) || quantityStr.includes(q) || kg_value.includes(q) || stockStr.includes(q);
     });
   }
 
@@ -540,7 +561,9 @@ function renderTable(list) {
     const isUtensils = (p.category === "utensil");
     const pieces = isUtensils ? (stock * 100) : "";
     const totalValue = (price * stock).toFixed(2);
-    const kgDisplay = p.kg ? p.kg : (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '');
+    const quantityDisplay = p.quantity 
+  ? `${p.quantity} ${p.unit}`
+  : "—";
 
     return `
       <tr>
@@ -558,7 +581,7 @@ function renderTable(list) {
         <td>₱${price.toFixed(2)}</td>
 
         <td>
-          ${kgDisplay ? `<strong>${kgDisplay}</strong>` : `<span class="kg-small">—</span>`}
+          ${quantityDisplay}
         </td>
 
         <td>₱${totalValue}</td>
@@ -740,7 +763,7 @@ window.exportXLSX = function () {
 
     let sheetData = [
         [
-            "SKU", "Name", "Description", "Category", "KG", "KG_Value",
+            "SKU", "Name", "Description", "Category", "Quantity", "Unit", "Quantity_Value",
             "Price", "Old Stock", "New Stock", "Stock Change", "Total Value", "Pieces"
         ]
     ];
@@ -777,8 +800,9 @@ window.exportXLSX = function () {
             p.name,
             p.description,
             p.category,
-            p.kg || "",
-            p.kg_value || "",
+            p.quantity || "",
+            p.unit || "",
+            p.quantity_value || "",
             p.price || 0,
             typeof oldStock === "number" ? oldStock : "",
             newStock,
