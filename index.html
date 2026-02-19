@@ -529,16 +529,26 @@ function applyFiltersAndRender() {
 
   // search filter
   const q = (searchQuery || "").toString().trim().toLowerCase();
-  if (q !== "") {
-    list = list.filter(p => {
-      const name = (p.name ?? "").toString().toLowerCase();
-      const sku = (p.sku ?? "").toString().toLowerCase();
-      const category = (p.category ?? "").toString().toLowerCase();
-      const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
-      const stockStr = (p.stock ?? "").toString().toLowerCase();
-      return name.includes(q) || sku.includes(q) || category.includes(q) || quantityStr.includes(q) || kg_value.includes(q) || stockStr.includes(q);
-    });
-  }
+
+if (q !== "") {
+  list = list.filter(p => {
+    const name = (p.name ?? "").toString().toLowerCase();
+    const sku = (p.sku ?? "").toString().toLowerCase();
+    const category = (p.category ?? "").toString().toLowerCase();
+    const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
+    const stockStr = (p.stock ?? "").toString().toLowerCase();
+    const kgValueStr = (p.quantity_value ?? "").toString().toLowerCase();
+
+    return (
+      name.includes(q) ||
+      sku.includes(q) ||
+      category.includes(q) ||
+      quantityStr.includes(q) ||
+      kgValueStr.includes(q) ||
+      stockStr.includes(q)
+    );
+  });
+}
 
   // sorting
   if (sortMode === "az") list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
