@@ -621,9 +621,53 @@ window.applyAdjust = async function (id, value, isCustom = false) {
     unit: finalUnit,
     stock: newKg            // stock = kg
   });
+	
+	await addDoc(collection(db, "transactions"), {
+ 	 productId: id,
+ 	 productName: p.name,
+  	 change: adjust,
+	 date: new Date(),
+ 	 timestamp: Date.now()
+});
 
   loadProducts();
 };
+
+	//Real Time Analytics request ni sir
+	async function loadAnalytics(range) {
+  const snapshot = await getDocs(collection(db, "transactions"));
+  const now = new Date();
+  let filtered = [];
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const d = new Date(data.date);
+
+    if (range === "daily" && d.toDateString() === now.toDateString()) {
+      filtered.push(data);
+    }
+
+    if (range === "weekly" && (now - d) <= 7 * 24 * 60 * 60 * 1000) {
+      filtered.push(data);
+    }
+
+    if (range === "monthly" && d.getMonth() === now.getMonth()) {
+      filtered.push(data);
+    }
+
+    if (range === "yearly" && d.getFullYear() === now.getFullYear()) {
+      filtered.push(data);
+    }
+  });
+
+  const totalMovement = filtered.reduce((sum, t) => sum + t.change, 0);
+
+  document.getElementById("main").innerHTML = `
+    <h3>${range.toUpperCase()} Analytics</h3>
+    <h4>Total Stock Movement: ${totalMovement}</h4>
+    <button onclick="showDashboard()">Back</button>
+  `;
+}
 
 // Stock Color
 function stockColor(stock) {
@@ -775,11 +819,15 @@ window.showDashboard = function () {
         <h4>Inventory Dashboard</h4>
       </div>
       <div class="d-flex align-items-center">
-        <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
-        <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-        <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
-        <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-        <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+    <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+    <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+    <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
+    <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
+    <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+	<button class="btn btn-info me-2" onclick="loadAnalytics('daily')">Daily</button>
+	<button class="btn btn-info me-2" onclick="loadAnalytics('weekly')">Weekly</button>
+	<button class="btn btn-info me-2" onclick="loadAnalytics('monthly')">Monthly</button>
+	<button class="btn btn-info me-2" onclick="loadAnalytics('yearly')">Yearly</button>
       </div>
     </div>
 
