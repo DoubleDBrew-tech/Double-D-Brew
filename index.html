@@ -563,52 +563,63 @@ window.deleteProduct = async function (id) {
 };
 
 // Adjust
-window.applyAdjust = async function (id, value) {
+window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
 
-  // 🔥 Convert input (can be 1, 0.5, 500g, 1kg)
-  let input = value.toString().trim().toLowerCase();
+  let currentKg = p.quantity_value || 0;
   let adjustKg = 0;
 
-  if (input.endsWith("g")) {
-    let grams = parseFloat(input.replace("g", ""));
-    if (isNaN(grams)) return alert("Invalid input!");
+  if (isCustom) {
+    // 🔥 CUSTOM MODE = grams (can be negative)
+    let grams = parseFloat(value);
+
+    if (isNaN(grams)) {
+      alert("Invalid grams value!");
+      return;
+    }
+
     adjustKg = grams / 1000;
-  } else if (input.endsWith("kg")) {
-    let kg = parseFloat(input.replace("kg", ""));
-    if (isNaN(kg)) return alert("Invalid input!");
-    adjustKg = kg;
+
   } else {
-    let kg = parseFloat(input);
-    if (isNaN(kg)) return alert("Invalid input!");
-    adjustKg = kg; // default = kg
+    // 🔥 QUICK BUTTONS = kg
+    let kg = parseFloat(value);
+
+    if (isNaN(kg)) {
+      alert("Invalid value!");
+      return;
+    }
+
+    adjustKg = kg;
   }
 
-  let currentKg = p.quantity_value || 0;
   let newKg = currentKg + adjustKg;
 
+  // 🚨 Prevent going below zero
   if (newKg < 0) {
-    alert("❌ Quantity cannot go below zero!");
+    alert("❌ Quantity cannot go below 0 kg!");
     return;
   }
+
+  // Round to 3 decimals to avoid floating bugs
+  newKg = parseFloat(newKg.toFixed(3));
 
   // Normalize display
   let finalUnit = "kg";
   let finalQuantity = newKg;
 
-  if (newKg < 1) {
+  if (newKg > 0 && newKg < 1) {
     finalUnit = "g";
-    finalQuantity = newKg * 1000;
+    finalQuantity = Math.round(newKg * 1000);
   }
 
   const ref = doc(db, "products", id);
 
   await updateDoc(ref, {
-    quantity_value: newKg,   // always stored in KG
+    quantity_value: newKg,  // always stored in kg
     quantity: finalQuantity,
     unit: finalUnit,
-    stock: newKg             // stock = kg
+    stock: newKg            // stock = kg
   });
 
   loadProducts();
@@ -714,8 +725,14 @@ function renderTable(list) {
 
     <li class="fw-bold px-2 mt-2">Custom</li>
     <li class="px-2">
-      <input type="number" id="custom-${p.id}" class="form-control form-control-sm mb-2" placeholder="Enter number">
-      <button class="btn btn-sm btn-primary w-100" onclick="applyAdjust('${p.id}', document.getElementById('custom-${p.id}').value)">Apply</button>
+    <input type="number" step="1" id="custom-${p.id}"
+	class="form-control form-control-sm mb-2"
+	placeholder="Enter grams (e.g. 300 or -300)">
+
+	<button class="btn btn-sm btn-primary w-100"
+	onclick="applyAdjust('${p.id}', document.getElementById('custom-${p.id}').value, true)">
+	Apply
+</button>
     </li>
   </ul>
 </div>
