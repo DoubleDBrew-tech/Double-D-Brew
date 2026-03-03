@@ -5,6 +5,7 @@ l<!DOCTYPE html>
   <title>Double'd Brew Inventory</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -272,7 +273,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where
+  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // FIREBASE
@@ -619,11 +620,15 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   });
 
   // 🔥 SERVER TIME (NOT CLIENT TIME)
-  await addDoc(collection(db, "transactions"), {
-    productId: id,
-    change: adjustKg,
-    timestamp: serverTimestamp()
-  });
+await addDoc(collection(db, "transactions"), {
+  productId: id,
+  productName: p.name,
+  category: p.category,
+  change: adjustKg,
+  price: p.price || 0,
+  totalValue: (adjustKg * (p.price || 0)),
+  timestamp: serverTimestamp()
+});
 
   loadProducts();
 };
@@ -637,11 +642,48 @@ document.getElementById("main").innerHTML = `
     <button class="btn btn-outline-primary me-2 chart-btn" data-range="weekly">Weekly</button>
     <button class="btn btn-outline-success me-2 chart-btn" data-range="monthly">Monthly</button>
     <button class="btn btn-outline-danger me-2 chart-btn" data-range="yearly">Yearly</button>
+	<button id="exportPDF">Export PDF</button>
     <button class="btn btn-secondary float-end" id="backDashboard">⬅ Back</button>
   </div>
-
-  <canvas id="analyticsChart" height="100"></canvas>
+	<div class="card"><h5>Total Revenue</h5><h2 id="revenueCard">₱0</h2></div>
+	<div class="card"><h5>Total Movement</h5><h2 id="movementCard">0 KG</h2></div>
+	<div class="card"><h5>Top Product</h5><h2 id="topProductCard">-</h2></div>
+    <canvas id="analyticsChart" height="100"></canvas>
 `;
+
+	let totalMovement = 0;
+let productTotals = {};
+
+snapshot.forEach(doc => {
+  const d = doc.data();
+  totalMovement += Math.abs(d.change);
+
+  if (!productTotals[d.productName])
+    productTotals[d.productName] = 0;
+
+  productTotals[d.productName] += Math.abs(d.change);
+});
+
+document.getElementById("movementCard").innerText =
+  totalMovement.toFixed(2) + " KG";
+
+const top = Object.keys(productTotals)
+  .sort((a,b)=>productTotals[b]-productTotals[a])[0];
+
+document.getElementById("topProductCard").innerText = top;
+
+	document.getElementById("exportPDF")
+  .addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Inventory Report", 20, 20);
+    doc.text("Revenue: " + 
+      document.getElementById("revenueCard").innerText, 20, 40);
+
+    doc.save("inventory-report.pdf");
+});
 	// Chart buttons
 document.querySelectorAll(".chart-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -654,6 +696,8 @@ document.querySelectorAll(".chart-btn").forEach(btn => {
 document.getElementById("backDashboard")
   .addEventListener("click", showDashboard);
 };
+
+	
 
 // Stock Color
 function stockColor(stock) {
@@ -850,7 +894,12 @@ window.showDashboard = function () {
 };
 
 	//Real time Analytics
-async function loadChart(range) {
+import { onSnapshot } from "firebase/firestore";
+
+let unsubscribe = null;
+
+function startRealtimeChart(range) {
+
   const now = new Date();
   let startDate = new Date();
 
@@ -859,97 +908,115 @@ async function loadChart(range) {
     startDate.setHours(0,0,0,0);
   }
 
-  if (range === "monthly") {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  }
-
-  if (range === "yearly") {
-    startDate = new Date(now.getFullYear(), 0, 1);
-  }
-
   const q = query(
     collection(db, "transactions"),
     where("timestamp", ">=", startDate)
   );
 
-  const snapshot = await getDocs(q);
+  if (unsubscribe) unsubscribe(); // stop old listener
 
-  let groupedData = {};
+  unsubscribe = onSnapshot(q, snapshot => {
 
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
-    const date = data.timestamp?.toDate();
-    if (!date) return;
+    let groupedData = {};
 
-    let key = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const date = data.timestamp?.toDate();
+      if (!date) return;
 
-    if (range === "weekly") {
-      key = date.toLocaleDateString("en-US", { weekday: "short" });
-    }
+      const key = date.toLocaleDateString("en-US", { weekday: "short" });
 
-    if (range === "monthly") {
-      const week = Math.ceil(date.getDate() / 7);
-      key = "Week " + week;
-    }
+      if (!groupedData[key]) groupedData[key] = 0;
+      groupedData[key] += data.change;
+    });
 
-    if (range === "yearly") {
-      key = date.toLocaleDateString("en-US", { month: "short" });
-    }
-
-    if (!groupedData[key]) groupedData[key] = 0;
-    groupedData[key] += data.change || 0;
+    renderChart(
+      Object.keys(groupedData),
+      Object.values(groupedData),
+      range
+    );
   });
-
-  let labels = Object.keys(groupedData);
-  let values = Object.values(groupedData);
-
-  // Sorting
-  if (range === "weekly") {
-    const daysOrder = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    labels.sort((a,b) => daysOrder.indexOf(a) - daysOrder.indexOf(b));
-  }
-
-  if (range === "yearly") {
-    const monthsOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    labels.sort((a,b) => monthsOrder.indexOf(a) - monthsOrder.indexOf(b));
-  }
-
-  values = labels.map(label => groupedData[label]);
-
-  renderChart(labels, values, range);
 }
 
-let chartInstance = null;
+function loadProductMovement() {
 
-function renderChart(labels, values, range) {
-  const ctx = document.getElementById("analyticsChart");
+  const q = query(collection(db, "transactions"));
 
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+  onSnapshot(q, snapshot => {
 
-  chartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        label: `${range.toUpperCase()} Stock Movement (KG)`,
-        data: values,
-        backgroundColor: values.map(v =>
-          v >= 0 ? "#28a745" : "#dc3545"
-        ),
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true }
+    let grouped = {};
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+
+      if (!grouped[d.productName])
+        grouped[d.productName] = 0;
+
+      grouped[d.productName] += d.change;
+    });
+
+    renderChart(
+      Object.keys(grouped),
+      Object.values(grouped),
+      "Product Movement"
+    );
+  });
+}
+
+	function loadRevenueAnalytics() {
+
+  const q = query(collection(db, "transactions"));
+
+  onSnapshot(q, snapshot => {
+
+    let revenue = 0;
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+
+      if (d.change < 0) {
+        revenue += Math.abs(d.totalValue);
       }
-    }
+    });
+
+    document.getElementById("revenueCard").innerText =
+      "₱" + revenue.toFixed(2);
   });
 }
 
+	function loadMostUsedIngredients() {
+
+  const q = query(
+    collection(db, "transactions"),
+    where("category", "==", "ingredient")
+  );
+
+  onSnapshot(q, snapshot => {
+
+    let usage = {};
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+
+      if (d.change < 0) {
+
+        if (!usage[d.productName])
+          usage[d.productName] = 0;
+
+        usage[d.productName] += Math.abs(d.change);
+      }
+    });
+
+    renderChart(
+      Object.keys(usage),
+      Object.values(usage),
+      "Most Used Ingredients"
+    );
+  });
+}
+
+	
+	
 // FOR MANGO ANIMATION BUTTON OFF AND
 let mangoAnimationOn = true; // default is ON
 
