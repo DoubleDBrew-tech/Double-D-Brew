@@ -1000,7 +1000,7 @@ document.getElementById("main").innerHTML = `
 document.querySelectorAll(".chart-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const range = btn.dataset.range;
-    onSnapshot(range);
+    renderChart(range);
   });
 });
 
