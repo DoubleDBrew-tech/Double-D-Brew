@@ -841,7 +841,7 @@ window.showDashboard = function () {
 	//Real time Analytics
 let chartInstance = null;
 
-async function loadChart(range) {
+window.loadChart = async function(range) {
   const now = new Date();
   let startDate = new Date();
 
@@ -911,7 +911,7 @@ async function loadChart(range) {
   renderChart(labels, values, range);
 }
 
-function renderChart(labels, values, range) {
+window.renderChart = function(labels, values, range) {
   const ctx = document.getElementById("analyticsChart");
 
   if (chartInstance) {
