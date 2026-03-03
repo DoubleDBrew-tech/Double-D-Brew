@@ -650,6 +650,18 @@ document.getElementById("main").innerHTML = `
 	<div class="card"><h5>Top Product</h5><h2 id="topProductCard">-</h2></div>
     <canvas id="analyticsChart" height="100"></canvas>
 `;
+					document.getElementById("exportPDF")
+   .addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Inventory Report", 20, 20);
+    doc.text("Revenue: " + 
+      document.getElementById("revenueCard").innerText, 20, 40);
+
+    doc.save("inventory-report.pdf");
+});
 
 		// Chart buttons
 document.querySelectorAll(".chart-btn").forEach(btn => {
@@ -967,19 +979,7 @@ document.getElementById("topProductCard").innerText = top;
       "₱" + revenue.toFixed(2);
   });
 }
-				document.getElementById("exportPDF")
-   {
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.text("Inventory Report", 20, 20);
-    doc.text("Revenue: " + 
-      document.getElementById("revenueCard").innerText, 20, 40);
-
-    doc.save("inventory-report.pdf");
-};
-
+	
 	function loadMostUsedIngredients() {
 
   const q = query(
