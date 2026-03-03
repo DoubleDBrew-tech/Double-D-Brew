@@ -664,21 +664,6 @@ document.getElementById("backDashboard")
   .addEventListener("click", showDashboard);
 };
 	
-	document.getElementById("exportPDF")
-  .addEventListener("click", () => {
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.text("Inventory Report", 20, 20);
-    doc.text("Revenue: " + 
-      document.getElementById("revenueCard").innerText, 20, 40);
-
-    doc.save("inventory-report.pdf");
-});
-
-
-	
 
 // Stock Color
 function stockColor(stock) {
@@ -1013,6 +998,18 @@ document.getElementById("topProductCard").innerText = top;
     );
   });
 }
+		document.getElementById("exportPDF")
+  .addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Inventory Report", 20, 20);
+    doc.text("Revenue: " + 
+      document.getElementById("revenueCard").innerText, 20, 40);
+
+    doc.save("inventory-report.pdf");
+});
 
 	
 	
