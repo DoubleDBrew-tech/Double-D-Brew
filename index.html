@@ -894,11 +894,9 @@ window.showDashboard = function () {
 };
 
 	//Real time Analytics
-import { onSnapshot } from "firebase/firestore";
+	let unsubscribe = null;
 
-let unsubscribe = null;
-
-function startRealtimeChart(range) {
+	function startRealtimeChart(range) {
 
   const now = new Date();
   let startDate = new Date();
