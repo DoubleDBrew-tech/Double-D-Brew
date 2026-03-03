@@ -564,19 +564,51 @@ window.deleteProduct = async function (id) {
 // Adjust
 window.applyAdjust = async function (id, value) {
   const p = products.find(x => x.id === id);
-  const adjust = parseInt(value);
+  if (!p) return;
 
-  if (isNaN(adjust)) return alert("Invalid number!");
+  // 🔥 Convert input (can be 1, 0.5, 500g, 1kg)
+  let input = value.toString().trim().toLowerCase();
+  let adjustKg = 0;
 
-  let newStock = (p.stock || 0) + adjust;
+  if (input.endsWith("g")) {
+    let grams = parseFloat(input.replace("g", ""));
+    if (isNaN(grams)) return alert("Invalid input!");
+    adjustKg = grams / 1000;
+  } else if (input.endsWith("kg")) {
+    let kg = parseFloat(input.replace("kg", ""));
+    if (isNaN(kg)) return alert("Invalid input!");
+    adjustKg = kg;
+  } else {
+    let kg = parseFloat(input);
+    if (isNaN(kg)) return alert("Invalid input!");
+    adjustKg = kg; // default = kg
+  }
 
-  if (newStock < 0) {
-    alert("❌ Stock cannot go below zero!");
+  let currentKg = p.quantity_value || 0;
+  let newKg = currentKg + adjustKg;
+
+  if (newKg < 0) {
+    alert("❌ Quantity cannot go below zero!");
     return;
   }
 
+  // Normalize display
+  let finalUnit = "kg";
+  let finalQuantity = newKg;
+
+  if (newKg < 1) {
+    finalUnit = "g";
+    finalQuantity = newKg * 1000;
+  }
+
   const ref = doc(db, "products", id);
-  await updateDoc(ref, { stock: newStock });
+
+  await updateDoc(ref, {
+    quantity_value: newKg,   // always stored in KG
+    quantity: finalQuantity,
+    unit: finalUnit,
+    stock: newKg             // stock = kg
+  });
 
   loadProducts();
 };
