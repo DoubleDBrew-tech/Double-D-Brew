@@ -650,6 +650,20 @@ document.getElementById("main").innerHTML = `
 	<div class="card"><h5>Top Product</h5><h2 id="topProductCard">-</h2></div>
     <canvas id="analyticsChart" height="100"></canvas>
 `;
+
+		// Chart buttons
+document.querySelectorAll(".chart-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const range = btn.dataset.range;
+    loadChart(range);
+  });
+});
+
+// Back button
+document.getElementById("backDashboard")
+  .addEventListener("click", showDashboard);
+};
+	
 	document.getElementById("exportPDF")
   .addEventListener("click", () => {
 
@@ -663,18 +677,6 @@ document.getElementById("main").innerHTML = `
     doc.save("inventory-report.pdf");
 });
 
-	// Chart buttons
-document.querySelectorAll(".chart-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const range = btn.dataset.range;
-    loadChart(range);
-  });
-});
-
-// Back button
-document.getElementById("backDashboard")
-  .addEventListener("click", showDashboard);
-};
 
 	
 
