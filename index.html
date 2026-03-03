@@ -272,7 +272,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment
+  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // FIREBASE
@@ -630,18 +630,29 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
 	//Real Time Analytics request ni sir
 window.showAnalytics = function () {
-  document.getElementById("main").innerHTML = `
-    <h3>Inventory Analytics</h3>
+document.getElementById("main").innerHTML = `
+  <h3>Inventory Analytics</h3>
 
-    <div class="mb-3">
-      <button class="btn btn-outline-primary me-2" onclick="loadChart('weekly')">Weekly</button>
-      <button class="btn btn-outline-success me-2" onclick="loadChart('monthly')">Monthly</button>
-      <button class="btn btn-outline-danger me-2" onclick="loadChart('yearly')">Yearly</button>
-      <button class="btn btn-secondary float-end" onclick="showDashboard()">⬅ Back</button>
-    </div>
+  <div class="mb-3">
+    <button class="btn btn-outline-primary me-2 chart-btn" data-range="weekly">Weekly</button>
+    <button class="btn btn-outline-success me-2 chart-btn" data-range="monthly">Monthly</button>
+    <button class="btn btn-outline-danger me-2 chart-btn" data-range="yearly">Yearly</button>
+    <button class="btn btn-secondary float-end" id="backDashboard">⬅ Back</button>
+  </div>
 
-    <canvas id="analyticsChart" height="100"></canvas>
-  `;
+  <canvas id="analyticsChart" height="100"></canvas>
+`;
+	// Chart buttons
+document.querySelectorAll(".chart-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const range = btn.dataset.range;
+    loadChart(range);
+  });
+});
+
+// Back button
+document.getElementById("backDashboard")
+  .addEventListener("click", showDashboard);
 };
 
 // Stock Color
@@ -841,7 +852,7 @@ window.showDashboard = function () {
 	//Real time Analytics
 let chartInstance = null;
 
-window.loadChart = async function(range) {
+async function loadChart(range) {
   const now = new Date();
   let startDate = new Date();
 
@@ -867,10 +878,9 @@ window.loadChart = async function(range) {
 
   let groupedData = {};
 
-  snapshot.forEach(doc => {
-    const data = doc.data();
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
     const date = data.timestamp?.toDate();
-
     if (!date) return;
 
     let key = "";
@@ -895,7 +905,7 @@ window.loadChart = async function(range) {
   let labels = Object.keys(groupedData);
   let values = Object.values(groupedData);
 
-  // 🔥 SORTING
+  // Sorting
   if (range === "weekly") {
     const daysOrder = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     labels.sort((a,b) => daysOrder.indexOf(a) - daysOrder.indexOf(b));
@@ -911,7 +921,9 @@ window.loadChart = async function(range) {
   renderChart(labels, values, range);
 }
 
-window.renderChart = function(labels, values, range) {
+let chartInstance = null;
+
+function renderChart(labels, values, range) {
   const ctx = document.getElementById("analyticsChart");
 
   if (chartInstance) {
@@ -921,11 +933,11 @@ window.renderChart = function(labels, values, range) {
   chartInstance = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: `${range.toUpperCase()} Stock Movement (KG)`,
         data: values,
-        backgroundColor: values.map(v => 
+        backgroundColor: values.map(v =>
           v >= 0 ? "#28a745" : "#dc3545"
         ),
         borderWidth: 1
