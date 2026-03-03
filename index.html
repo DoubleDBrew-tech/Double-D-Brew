@@ -943,13 +943,7 @@ function loadProductMovement() {
       if (d.change < 0) {
         revenue += Math.abs(d.totalValue);
       }
-    });
-
-    document.getElementById("revenueCard").innerText =
-      "₱" + revenue.toFixed(2);
-  });
-}
-		let totalMovement = 0;
+				let totalMovement = 0;
 let productTotals = {};
 
 snapshot.forEach(doc => {
@@ -969,6 +963,12 @@ const top = Object.keys(productTotals)
   .sort((a,b)=>productTotals[b]-productTotals[a])[0];
 
 document.getElementById("topProductCard").innerText = top;
+    });
+
+    document.getElementById("revenueCard").innerText =
+      "₱" + revenue.toFixed(2);
+  });
+}
 
 	document.getElementById("exportPDF")
   .addEventListener("click", () => {
