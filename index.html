@@ -412,36 +412,36 @@ async function saveNewProduct(e) {
 
 let quantityInput = parseFloat(form.quantity.value);
 let unit = form.unit.value;
+let price = parseFloat(form.price.value);
 
-let quantity_value = 0; // always stored in KG
-
-// Convert to KG internally
-if (unit === "g") {
-  quantity_value = quantityInput / 1000;
-} else {
-  quantity_value = quantityInput;
+if (isNaN(quantityInput) || quantityInput < 0) {
+  alert("❌ Invalid quantity!");
+  return;
 }
 
-// Auto normalize display
+if (isNaN(price) || price < 0) {
+  alert("❌ Invalid price!");
+  return;
+}
+
+// convert to kg
+let quantity_value = unit === "g"
+  ? quantityInput / 1000
+  : quantityInput;
+
+// normalize display
 let finalUnit = unit;
 let finalQuantity = quantityInput;
 
-// If user enters 1000g → convert display to 1kg
 if (unit === "g" && quantityInput >= 1000) {
   quantity_value = quantityInput / 1000;
   finalUnit = "kg";
   finalQuantity = quantity_value;
 }
 
-// If user enters 0.5kg → convert display to 500g
 if (unit === "kg" && quantityInput < 1) {
-  quantity_value = quantityInput;
   finalUnit = "g";
   finalQuantity = quantityInput * 1000;
-}
-	if (quantity < 0 || price < 0 || stock < 0) {
-  alert("❌ Negative values are not allowed!");
-  return;
 }
 
  const newP = {
@@ -453,7 +453,7 @@ if (unit === "kg" && quantityInput < 1) {
   unit: finalUnit,
   quantity_value: quantity_value, // ALWAYS in kg
   stock: quantity_value, // stock = kg
-  price: parseFloat(form.price.value)
+  price: price
 };
 
   await addDoc(collection(db, "products"), newP);
@@ -504,36 +504,36 @@ async function updateProduct(e) {
 
 let quantityInput = parseFloat(form.quantity.value);
 let unit = form.unit.value;
+let price = parseFloat(form.price.value);
 
-let quantity_value = 0; // always stored in KG
-
-// Convert to KG internally
-if (unit === "g") {
-  quantity_value = quantityInput / 1000;
-} else {
-  quantity_value = quantityInput;
+if (isNaN(quantityInput) || quantityInput < 0) {
+  alert("❌ Invalid quantity!");
+  return;
 }
 
-// Auto normalize display
+if (isNaN(price) || price < 0) {
+  alert("❌ Invalid price!");
+  return;
+}
+
+// convert to kg
+let quantity_value = unit === "g"
+  ? quantityInput / 1000
+  : quantityInput;
+
+// normalize display
 let finalUnit = unit;
 let finalQuantity = quantityInput;
 
-// If user enters 1000g → convert display to 1kg
 if (unit === "g" && quantityInput >= 1000) {
   quantity_value = quantityInput / 1000;
   finalUnit = "kg";
   finalQuantity = quantity_value;
 }
 
-// If user enters 0.5kg → convert display to 500g
 if (unit === "kg" && quantityInput < 1) {
-  quantity_value = quantityInput;
   finalUnit = "g";
   finalQuantity = quantityInput * 1000;
-}
-	if (quantity < 0 || price < 0 || stock < 0) {
-  alert("❌ Negative values are not allowed!");
-  return;
 }
 
  const newP = {
@@ -545,7 +545,7 @@ if (unit === "kg" && quantityInput < 1) {
   unit: finalUnit,
   quantity_value: quantity_value, // ALWAYS in kg
   stock: quantity_value, // stock = kg
-  price: parseFloat(form.price.value)
+  price: price
 };
     
 
