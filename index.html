@@ -396,7 +396,7 @@ window.addProduct = function () {
       </div>
 
       <input class="form-control mb-2" name="price" type="number" step="0.01" min="0" placeholder="Price" required>
-      <input class="form-control mb-2" name="stock" type="number" min="0" placeholder="Stock" required>
+      
 
       <button class="btn btn-success">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
@@ -410,25 +410,51 @@ async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
 
-  let quantity = parseFloat(form.quantity.value);
-  let unit = form.unit.value;
-  let quantity_value = unit === "g" ? quantity / 1000 : quantity;
+let quantityInput = parseFloat(form.quantity.value);
+let unit = form.unit.value;
+
+let quantity_value = 0; // always stored in KG
+
+// Convert to KG internally
+if (unit === "g") {
+  quantity_value = quantityInput / 1000;
+} else {
+  quantity_value = quantityInput;
+}
+
+// Auto normalize display
+let finalUnit = unit;
+let finalQuantity = quantityInput;
+
+// If user enters 1000g → convert display to 1kg
+if (unit === "g" && quantityInput >= 1000) {
+  quantity_value = quantityInput / 1000;
+  finalUnit = "kg";
+  finalQuantity = quantity_value;
+}
+
+// If user enters 0.5kg → convert display to 500g
+if (unit === "kg" && quantityInput < 1) {
+  quantity_value = quantityInput;
+  finalUnit = "g";
+  finalQuantity = quantityInput * 1000;
+}
 	if (quantity < 0 || price < 0 || stock < 0) {
   alert("❌ Negative values are not allowed!");
   return;
 }
 
-  const newP = {
-    sku: form.sku.value,
-    name: form.name.value,
-    description: form.description.value,
-    category: form.category.value,
-    quantity,
-    unit,
-    quantity_value,
-    price: parseFloat(form.price.value),
-    stock: parseInt(form.stock.value)
-  };
+ const newP = {
+  sku: form.sku.value,
+  name: form.name.value,
+  description: form.description.value,
+  category: form.category.value,
+  quantity: finalQuantity,
+  unit: finalUnit,
+  quantity_value: quantity_value, // ALWAYS in kg
+  stock: quantity_value, // stock = kg
+  price: parseFloat(form.price.value)
+};
 
   await addDoc(collection(db, "products"), newP);
   alert("✅ Product added!");
@@ -462,7 +488,7 @@ window.editProduct = function (id) {
       </div>
 
       <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" min="0" required>
-      <input class="form-control mb-2" name="stock" value="${p.stock ?? 0}" type="number" min="0" required>
+      
 
       <button class="btn btn-primary">Update Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
@@ -476,26 +502,52 @@ async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
 
-  let quantity = parseFloat(form.quantity.value);
-  let unit = form.unit.value;
-  let quantity_value = unit === "g" ? quantity / 1000 : quantity;
+let quantityInput = parseFloat(form.quantity.value);
+let unit = form.unit.value;
+
+let quantity_value = 0; // always stored in KG
+
+// Convert to KG internally
+if (unit === "g") {
+  quantity_value = quantityInput / 1000;
+} else {
+  quantity_value = quantityInput;
+}
+
+// Auto normalize display
+let finalUnit = unit;
+let finalQuantity = quantityInput;
+
+// If user enters 1000g → convert display to 1kg
+if (unit === "g" && quantityInput >= 1000) {
+  quantity_value = quantityInput / 1000;
+  finalUnit = "kg";
+  finalQuantity = quantity_value;
+}
+
+// If user enters 0.5kg → convert display to 500g
+if (unit === "kg" && quantityInput < 1) {
+  quantity_value = quantityInput;
+  finalUnit = "g";
+  finalQuantity = quantityInput * 1000;
+}
 	if (quantity < 0 || price < 0 || stock < 0) {
   alert("❌ Negative values are not allowed!");
   return;
 }
 
-  const ref = doc(db, "products", form.id.value);
-
-  await updateDoc(ref, {
-    sku: form.sku.value,
-    name: form.name.value,
-    description: form.description.value,
-    category: form.category.value,
-    quantity,
-    unit,
-    quantity_value,
-    price: parseFloat(form.price.value),
-    stock: parseInt(form.stock.value)
+ const newP = {
+  sku: form.sku.value,
+  name: form.name.value,
+  description: form.description.value,
+  category: form.category.value,
+  quantity: finalQuantity,
+  unit: finalUnit,
+  quantity_value: quantity_value, // ALWAYS in kg
+  stock: quantity_value, // stock = kg
+  price: parseFloat(form.price.value)
+};
+    
   });
 
   alert("✅ Updated!");
