@@ -272,7 +272,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc
+  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // FIREBASE
@@ -568,66 +568,62 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
 
-  let currentKg = p.quantity_value || 0;
   let adjustKg = 0;
 
   if (isCustom) {
-    // 🔥 CUSTOM MODE = grams (can be negative)
-    let grams = parseFloat(value);
-
+    const grams = parseFloat(value);
     if (isNaN(grams)) {
       alert("Invalid grams value!");
       return;
     }
-
     adjustKg = grams / 1000;
-
   } else {
-    // 🔥 QUICK BUTTONS = kg
-    let kg = parseFloat(value);
-
+    const kg = parseFloat(value);
     if (isNaN(kg)) {
       alert("Invalid value!");
       return;
     }
-
     adjustKg = kg;
   }
 
-  let newKg = currentKg + adjustKg;
+  const currentKg = p.quantity_value || 0;
+  const newKg = parseFloat((currentKg + adjustKg).toFixed(3));
 
-  // 🚨 Prevent going below zero
   if (newKg < 0) {
     alert("❌ Quantity cannot go below 0 kg!");
     return;
   }
 
-  // Round to 3 decimals to avoid floating bugs
-  newKg = parseFloat(newKg.toFixed(3));
-
-  // Normalize display
-  let finalUnit = "kg";
-  let finalQuantity = newKg;
-
-  if (newKg > 0 && newKg < 1) {
-    finalUnit = "g";
-    finalQuantity = Math.round(newKg * 1000);
-  }
-
   const ref = doc(db, "products", id);
 
+  // 🔥 ATOMIC SAFE UPDATE
   await updateDoc(ref, {
-    quantity_value: newKg,  // always stored in kg
-    quantity: finalQuantity,
-    unit: finalUnit,
-    stock: newKg            // stock = kg
+    quantity_value: increment(adjustKg),
+    stock: increment(adjustKg)
   });
-	
-	await addDoc(collection(db, "transactions"), {
- 	 productId: id,
- 	 change: adjustKg,
- 	 timestamp: Date.now()
-});
+
+  // 🔥 GET FINAL VALUE FOR DISPLAY UPDATE
+  const finalKg = newKg;
+
+  let finalUnit = "kg";
+  let finalQuantity = finalKg;
+
+  if (finalKg > 0 && finalKg < 1) {
+    finalUnit = "g";
+    finalQuantity = Math.round(finalKg * 1000);
+  }
+
+  await updateDoc(ref, {
+    quantity: finalQuantity,
+    unit: finalUnit
+  });
+
+  // 🔥 SERVER TIME (NOT CLIENT TIME)
+  await addDoc(collection(db, "transactions"), {
+    productId: id,
+    change: adjustKg,
+    timestamp: serverTimestamp()
+  });
 
   loadProducts();
 };
@@ -843,41 +839,74 @@ window.showDashboard = function () {
 };
 
 	//Real time Analytics
-	let chartInstance = null;
+let chartInstance = null;
 
 async function loadChart(range) {
-  const snapshot = await getDocs(collection(db, "transactions"));
-
   const now = new Date();
+  let startDate = new Date();
+
+  if (range === "weekly") {
+    startDate.setDate(now.getDate() - now.getDay());
+    startDate.setHours(0,0,0,0);
+  }
+
+  if (range === "monthly") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  if (range === "yearly") {
+    startDate = new Date(now.getFullYear(), 0, 1);
+  }
+
+  const q = query(
+    collection(db, "transactions"),
+    where("timestamp", ">=", startDate)
+  );
+
+  const snapshot = await getDocs(q);
+
   let groupedData = {};
 
   snapshot.forEach(doc => {
     const data = doc.data();
-    const date = new Date(data.timestamp || data.date);
+    const date = data.timestamp?.toDate();
+
+    if (!date) return;
 
     let key = "";
 
     if (range === "weekly") {
       key = date.toLocaleDateString("en-US", { weekday: "short" });
-      if ((now - date) > 7 * 24 * 60 * 60 * 1000) return;
+    }
 
-    } else if (range === "monthly") {
+    if (range === "monthly") {
       const week = Math.ceil(date.getDate() / 7);
       key = "Week " + week;
-      if (date.getMonth() !== now.getMonth()) return;
+    }
 
-    } else if (range === "yearly") {
+    if (range === "yearly") {
       key = date.toLocaleDateString("en-US", { month: "short" });
-      if (date.getFullYear() !== now.getFullYear()) return;
     }
 
     if (!groupedData[key]) groupedData[key] = 0;
-
     groupedData[key] += data.change || 0;
   });
 
-  const labels = Object.keys(groupedData);
-  const values = Object.values(groupedData);
+  let labels = Object.keys(groupedData);
+  let values = Object.values(groupedData);
+
+  // 🔥 SORTING
+  if (range === "weekly") {
+    const daysOrder = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    labels.sort((a,b) => daysOrder.indexOf(a) - daysOrder.indexOf(b));
+  }
+
+  if (range === "yearly") {
+    const monthsOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    labels.sort((a,b) => monthsOrder.indexOf(a) - monthsOrder.indexOf(b));
+  }
+
+  values = labels.map(label => groupedData[label]);
 
   renderChart(labels, values, range);
 }
@@ -896,6 +925,9 @@ function renderChart(labels, values, range) {
       datasets: [{
         label: `${range.toUpperCase()} Stock Movement (KG)`,
         data: values,
+        backgroundColor: values.map(v => 
+          v >= 0 ? "#28a745" : "#dc3545"
+        ),
         borderWidth: 1
       }]
     },
