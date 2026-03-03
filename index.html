@@ -625,9 +625,7 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 	
 	await addDoc(collection(db, "transactions"), {
  	 productId: id,
- 	 productName: p.name,
-  	 change: applyAdjust,
-	 date: new Date(),
+ 	 change: adjustKg,
  	 timestamp: Date.now()
 });
 
