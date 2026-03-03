@@ -837,6 +837,44 @@ function clearActiveListeners() {
   activeListeners = [];
 }
 
+	let myChart = null; // Global variable to track the chart instance
+
+function renderChart(labels, data, title) {
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+
+    // If a chart already exists, destroy it before creating a new one
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    myChart = new Chart(ctx, {
+        type: 'bar', // You can change this to 'line' if you prefer
+        data: {
+            labels: labels,
+            datasets: [{
+                label: title,
+                data: data,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+}
 /**
  * 1. REAL-TIME CHART (Weekly/Monthly/Yearly)
  */
