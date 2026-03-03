@@ -651,39 +651,7 @@ document.getElementById("main").innerHTML = `
     <canvas id="analyticsChart" height="100"></canvas>
 `;
 
-	let totalMovement = 0;
-let productTotals = {};
 
-snapshot.forEach(doc => {
-  const d = doc.data();
-  totalMovement += Math.abs(d.change);
-
-  if (!productTotals[d.productName])
-    productTotals[d.productName] = 0;
-
-  productTotals[d.productName] += Math.abs(d.change);
-});
-
-document.getElementById("movementCard").innerText =
-  totalMovement.toFixed(2) + " KG";
-
-const top = Object.keys(productTotals)
-  .sort((a,b)=>productTotals[b]-productTotals[a])[0];
-
-document.getElementById("topProductCard").innerText = top;
-
-	document.getElementById("exportPDF")
-  .addEventListener("click", () => {
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.text("Inventory Report", 20, 20);
-    doc.text("Revenue: " + 
-      document.getElementById("revenueCard").innerText, 20, 40);
-
-    doc.save("inventory-report.pdf");
-});
 	// Chart buttons
 document.querySelectorAll(".chart-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -981,6 +949,39 @@ function loadProductMovement() {
       "₱" + revenue.toFixed(2);
   });
 }
+		let totalMovement = 0;
+let productTotals = {};
+
+snapshot.forEach(doc => {
+  const d = doc.data();
+  totalMovement += Math.abs(d.change);
+
+  if (!productTotals[d.productName])
+    productTotals[d.productName] = 0;
+
+  productTotals[d.productName] += Math.abs(d.change);
+});
+
+document.getElementById("movementCard").innerText =
+  totalMovement.toFixed(2) + " KG";
+
+const top = Object.keys(productTotals)
+  .sort((a,b)=>productTotals[b]-productTotals[a])[0];
+
+document.getElementById("topProductCard").innerText = top;
+
+	document.getElementById("exportPDF")
+  .addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Inventory Report", 20, 20);
+    doc.text("Revenue: " + 
+      document.getElementById("revenueCard").innerText, 20, 40);
+
+    doc.save("inventory-report.pdf");
+});
 
 	function loadMostUsedIngredients() {
 
