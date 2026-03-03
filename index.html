@@ -633,50 +633,6 @@ await addDoc(collection(db, "transactions"), {
   loadProducts();
 };
 
-	//Real Time Analytics request ni sir
-window.showAnalytics = function () {
-document.getElementById("main").innerHTML = `
-  <h3>Inventory Analytics</h3>
-
-  <div class="mb-3">
-    <button class="btn btn-outline-primary me-2 chart-btn" data-range="weekly">Weekly</button>
-    <button class="btn btn-outline-success me-2 chart-btn" data-range="monthly">Monthly</button>
-    <button class="btn btn-outline-danger me-2 chart-btn" data-range="yearly">Yearly</button>
-	<button id="exportPDF">Export PDF</button>
-    <button class="btn btn-secondary float-end" id="backDashboard">⬅ Back</button>
-  </div>
-	<div class="card"><h5>Total Revenue</h5><h2 id="revenueCard">₱0</h2></div>
-	<div class="card"><h5>Total Movement</h5><h2 id="movementCard">0 KG</h2></div>
-	<div class="card"><h5>Top Product</h5><h2 id="topProductCard">-</h2></div>
-    <canvas id="analyticsChart" height="100"></canvas>
-`;
-					document.getElementById("exportPDF")
-   .addEventListener("click", () => {
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.text("Inventory Report", 20, 20);
-    doc.text("Revenue: " + 
-      document.getElementById("revenueCard").innerText, 20, 40);
-
-    doc.save("inventory-report.pdf");
-});
-
-		// Chart buttons
-document.querySelectorAll(".chart-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const range = btn.dataset.range;
-    loadChart(range);
-  });
-});
-
-// Back button
-document.getElementById("backDashboard")
-  .addEventListener("click", showDashboard);
-};
-	
-
 // Stock Color
 function stockColor(stock) {
   if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
@@ -1010,6 +966,48 @@ document.getElementById("topProductCard").innerText = top;
     );
   });
 }
+		//Real Time Analytics request ni sir
+window.showAnalytics = function () {
+document.getElementById("main").innerHTML = `
+  <h3>Inventory Analytics</h3>
+
+  <div class="mb-3">
+    <button class="btn btn-outline-primary me-2 chart-btn" data-range="weekly">Weekly</button>
+    <button class="btn btn-outline-success me-2 chart-btn" data-range="monthly">Monthly</button>
+    <button class="btn btn-outline-danger me-2 chart-btn" data-range="yearly">Yearly</button>
+	<button id="exportPDF">Export PDF</button>
+    <button class="btn btn-secondary float-end" id="backDashboard">⬅ Back</button>
+  </div>
+	<div class="card"><h5>Total Revenue</h5><h2 id="revenueCard">₱0</h2></div>
+	<div class="card"><h5>Total Movement</h5><h2 id="movementCard">0 KG</h2></div>
+	<div class="card"><h5>Top Product</h5><h2 id="topProductCard">-</h2></div>
+    <canvas id="analyticsChart" height="100"></canvas>
+`;
+					document.getElementById("exportPDF")
+   .addEventListener("click", () => {
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Inventory Report", 20, 20);
+    doc.text("Revenue: " + 
+      document.getElementById("revenueCard").innerText, 20, 40);
+
+    doc.save("inventory-report.pdf");
+});
+
+		// Chart buttons
+document.querySelectorAll(".chart-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const range = btn.dataset.range;
+    loadChart(range);
+  });
+});
+
+// Back button
+document.getElementById("backDashboard")
+  .addEventListener("click", showDashboard);
+};
 
 
 	
