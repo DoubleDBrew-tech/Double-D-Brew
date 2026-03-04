@@ -986,12 +986,23 @@ window.filterProducts = function () {
 // Dashboard
 window.showDashboard = function () {
   const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
+  const startDate = document.getElementById("filterStart")?.value || "";
+  const endDate = document.getElementById("filterEnd")?.value || "";
 
   const filteredList = products.filter(p => {
     const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
     const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
                           (p.sku || "").toLowerCase().includes(search);
-    return matchesCategory && matchesSearch;
+    
+    let matchesDate = true;
+    if (startDate && endDate) {
+      if (p.expiry && p.expiry !== "N/A") {
+        matchesDate = (p.expiry >= startDate && p.expiry <= endDate);
+      } else {
+        matchesDate = false; 
+      }
+    }
+    return matchesCategory && matchesSearch && matchesDate;
   });
 
   let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
@@ -999,54 +1010,39 @@ window.showDashboard = function () {
 
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Inventory Dashboard</h4>
-        <div class="d-flex gap-2">
-            <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'}" onclick="selectCategory('all')">All</button>
-            <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'}" onclick="selectCategory('ingredient')">Ingredients</button>
-            <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'}" onclick="selectCategory('utensil')">Utensils</button>
-            <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
-        </div>
+      <h4>Inventory Dashboard</h4>
+      <div class="d-flex align-items-center">
+        <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+        <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+        <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
+        <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
+        <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+        <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
+      </div>
     </div>
 
     <div class="input-group mb-3">
-        <span class="input-group-text">🔍</span>
-        <input type="text" id="searchInput" class="form-control" onkeyup="applyFiltersAndRender()" placeholder="Search (name, sku...)">
+      <span class="input-group-text">🔍</span>
+      <input type="text" id="searchInput" class="form-control" placeholder="Search..." onkeyup="applyFiltersAndRender()" value="${search}">
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-4">
-          <div class="card p-3 text-center shadow-sm">
-            <h5>Total Products</h5>
-            <h2>${filteredList.length}</h2>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card p-3 text-center shadow-sm">
-            <h5>Total Stock</h5>
-            <h2>${totalItems.toFixed(2)}</h2>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card p-3 text-center shadow-sm bg-light">
-            <h5>Inventory Value</h5>
-            <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
-          </div>
-        </div>
+      <div class="col-md-4"><div class="card p-3 text-center shadow-sm"><h5 class="text-muted">Total Products</h5><h2>${filteredList.length}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3 text-center shadow-sm"><h5 class="text-muted">Total Stock</h5><h2>${totalItems.toFixed(2)}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3 text-center shadow-sm bg-light"><h5 class="text-muted">Inventory Value</h5><h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2></div></div>
     </div>
 
     <table class="table table-striped align-middle border">
-        <thead class="table-dark">
-            <tr>
-                <th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Expiry</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="productTableBody"></tbody>
+      <thead class="table-dark">
+        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Expiry</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="productTableBody"></tbody>
     </table>
   `;
 
   renderTable(filteredList);
-  
-  // Re-focus the search bar if the user was typing
+
+  // Restore focus to search bar so typing stays smooth
   if (search) {
     const input = document.getElementById("searchInput");
     input.focus();
