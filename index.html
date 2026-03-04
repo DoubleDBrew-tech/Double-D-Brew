@@ -616,26 +616,16 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
   // 1. Calculate the adjustment amount in KG
   if (isCustom) {
-    let grams = parseFloat(value);
-    
-    // 🔥 NEW: Check if the user typed a negative sign in the custom box
-    if (grams < 0) {
-      alert("❌ Negative numbers are not allowed! Please enter a positive amount.");
-      return; 
-    }
-
-    if (isNaN(grams)) {
-      alert("Invalid grams value!");
+    const grams = parseFloat(value);
+    if (isNaN(grams) || grams <= 0) { // 🔥 Added check: must be greater than 0
+      alert("❌ Please enter a valid positive number of grams!");
       return;
     }
     adjustKg = grams / 1000;
   } else {
-    // 🔥 NEW: Ensure the fixed buttons (like +1) are treated as absolute positive numbers
-    // This prevents any accidental negative values from the UI
-    const kg = Math.abs(parseFloat(value)); 
-    
-    if (isNaN(kg)) {
-      alert("Invalid value!");
+    const kg = parseFloat(value);
+    if (isNaN(kg) || kg <= 0) { // 🔥 Added check: must be greater than 0
+      alert("❌ Please enter a valid positive number!");
       return;
     }
     adjustKg = kg;
@@ -649,11 +639,15 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   if (adjustKg > 0 && p.category === "ingredient") {
     const shelfLife = prompt(`You are adding stock to ${p.name}.\nHow many days from today will this new batch expire?`, "30");
     
-    if (shelfLife !== null && shelfLife !== "") {
+    // 🔥 FIX: If the user clicks "Cancel" (null), we stop the whole process
+    if (shelfLife === null) {
+      alert("Adjustment cancelled. No stock was added.");
+      return; 
+    }
+
+    if (shelfLife !== "") {
       const d = new Date();
-      // Ensure shelfLife input is also positive
-      const days = Math.abs(parseInt(shelfLife));
-      d.setDate(d.getDate() + days);
+      d.setDate(d.getDate() + Math.abs(parseInt(shelfLife)));
       newExpiry = d.toISOString().split('T')[0];
     }
   }
@@ -678,21 +672,18 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       expiry: newExpiry
     });
 
-    // 5. Record Transaction for Analytics
+    // 5. Record Transaction
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
       category: p.category,
-      change: adjustKg, // This will now always be positive
+      change: adjustKg,
       price: p.price || 0,
       totalValue: (adjustKg * (p.price || 0)),
       timestamp: serverTimestamp()
     });
 
-    if (adjustKg > 0) {
-        alert(`✅ Stock Added! New Expiry: ${newExpiry}`);
-    }
-
+    alert(`✅ Stock Added! New Expiry: ${newExpiry}`);
     loadProducts();
   } catch (error) {
     console.error("Adjustment failed:", error);
