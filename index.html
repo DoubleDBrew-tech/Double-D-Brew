@@ -671,13 +671,72 @@ async function updateProduct(e) {
   }
 }
 
-// DELETE
+	// --- 1. PLACE THE HELPER HERE ---
+async function handleBatchPromotion(deletedSku) {
+  // Fix: removed the double 'doc(' call from the previous snippet
+  const baseSKU = deletedSku.replace("-N", "").replace("-P", "").replace("-O", "");
+  
+  // Find any remaining batches for this product in the local 'products' array
+  const remaining = products.filter(x => x.sku.startsWith(baseSKU) && x.sku !== deletedSku);
+
+  // If only one remains, promote it to the main product
+  if (remaining.length === 1) {
+    const survivor = remaining[0];
+    const cleanName = survivor.name
+      .replace(" (New)", "")
+      .replace(" (Previous)", "")
+      .replace(" (Old)", "");
+
+    await updateDoc(doc(db, "products", survivor.id), {
+      name: cleanName,
+      sku: baseSKU
+    });
+  }
+}
+	
+//Delete Product
 window.deleteProduct = async function (id) {
-  if (confirm("Delete this product?")) {
-    await deleteDoc(doc(db, "products", id));
-    loadProducts();
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+
+  if (confirm(`Are you sure you want to delete ${p.name}?`)) {
+    try {
+      // 1. Perform the deletion
+      await deleteDoc(doc(db, "products", id));
+
+      // 2. Identify the base SKU (e.g., "MNG" from "MNG-P")
+      const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
+
+      // 3. Find remaining batches for this product (excluding the one we just deleted)
+      const remainingBatches = products.filter(x => 
+        x.id !== id && 
+        (x.sku === baseSKU || x.sku === baseSKU + "-N" || x.sku === baseSKU + "-P" || x.sku === baseSKU + "-O")
+      );
+
+      // 4. CONSOLIDATION LOGIC:
+      // If only one batch is left after deletion, promote it to be the "Main" product
+      if (remainingBatches.length === 1) {
+        const survivor = remainingBatches[0];
+        const cleanName = survivor.name
+          .replace(" (New)", "")
+          .replace(" (Previous)", "")
+          .replace(" (Old)", "");
+
+        await updateDoc(doc(db, "products", survivor.id), {
+          name: cleanName,
+          sku: baseSKU
+        });
+      }
+
+      loadProducts();
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("❌ Error deleting product.");
+    }
   }
 };
+
+	
 
 // Adjust
 window.applyAdjust = async function (id, value, isCustom = false) {
@@ -689,102 +748,92 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
 
   try {
-    let newStock;
-    let adjustKg;
+    let adjustKg = isUtensil ? (adjustAmount / 100) : (isCustom ? adjustAmount / 1000 : adjustAmount);
+    const currentStock = parseFloat(p.stock || 0);
+    const newStock = parseFloat((currentStock + adjustKg).toFixed(3));
 
-    // --- 1. CALCULATE CHANGE ---
-    if (isUtensil) {
-      const currentPieces = Math.round((p.stock || 0) * 100);
-      const newPieces = currentPieces + adjustAmount;
+    if (newStock < 0) return alert("❌ Insufficient stock.");
+
+    // --- SCENARIO: ADDING NEW STOCK (RESTOCK) ---
+    if (adjustKg > 0 && !isUtensil) {
+      const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
+      const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "").replace(" (Old)", "");
       
-      // Strict check: Prevent utensils from going below 0
-      if (newPieces < 0) return alert(`❌ Insufficient pieces. Current: ${currentPieces}`);
-      
-      newStock = newPieces / 100;
-      adjustKg = adjustAmount / 100; 
-    } else {
-      adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
-      const currentStock = parseFloat(p.stock || 0);
-      newStock = parseFloat((currentStock + adjustKg).toFixed(3));
-      
-      // Strict check: Prevent ingredients from going below 0
-      if (newStock < 0) return alert("❌ Insufficient stock.");
-    }
+      const prevBatch = products.find(x => x.sku === baseSKU + "-P");
+      const newBatch = products.find(x => x.sku === baseSKU + "-N");
 
-    // --- 2. VALUE FOR ANALYTICS ---
-    const transactionValue = Math.abs(adjustKg * (p.price || 0));
+      // IF PREVIOUS AND NEW BOTH EXIST -> Shift to "Old"
+      if (prevBatch && newBatch) {
+        const confirmShift = confirm(`⚠️ Warning: ${prevBatch.name} still has ${prevBatch.stock}kg left.\nAdding a new batch will move it to "Old". Continue?`);
+        if (!confirmShift) return;
 
-    // --- 3. AUTO-DELETE & BATCH PROMOTION (Ingredients Only) ---
-    // Added '!isUtensil' so utensils are never deleted at 0
-    if (newStock <= 0 && !isUtensil) {
-      await deleteDoc(doc(db, "products", id));
-      
-      if (p.sku.endsWith("-P") || p.name.includes("(Previous)")) {
-        const baseSKU = p.sku.replace("-P", "");
-        const newBatch = products.find(x => x.sku === baseSKU + "-N");
-        
-        if (newBatch) {
-          await updateDoc(doc(db, "products", newBatch.id), {
-            name: newBatch.name.replace(" (New)", ""), 
-            sku: baseSKU 
-          });
-          alert(`✅ ${p.name} empty. ${newBatch.name} promoted to primary.`);
-        }
-      }
-    } 
-    // --- 4. CREATE NEW BATCH (Ingredients Only) ---
-    else if (adjustKg > 0 && !isUtensil) {
-        const today = new Date().toISOString().split('T')[0];
-        const newExpiryDate = prompt(`Restocking ${p.name}.\nEnter Expiry (YYYY-MM-DD):`, today);
-        if (!newExpiryDate) return;
+        // 1. Move Previous to Old
+        await updateDoc(doc(db, "products", prevBatch.id), {
+          name: cleanName + " (Old)",
+          sku: baseSKU + "-O"
+        });
 
-        const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
-        const baseSKU = p.sku.replace("-N", "").replace("-P", "");
-
+        // 2. Move current New to Previous
+        await updateDoc(doc(db, "products", newBatch.id), {
+          name: cleanName + " (Previous)",
+          sku: baseSKU + "-P"
+        });
+      } 
+      // IF ONLY ONE BATCH EXISTS -> Standard Shift
+      else {
         await updateDoc(doc(db, "products", id), { 
-            name: cleanName + " (Previous)", 
-            sku: baseSKU + "-P" 
+          name: cleanName + " (Previous)", 
+          sku: baseSKU + "-P" 
         });
+      }
 
-        await addDoc(collection(db, "products"), {
-          sku: baseSKU + "-N",
-          name: cleanName + " (New)",
-          description: p.description || "",
-          category: p.category,
-          price: p.price,
-          stock: adjustKg, 
-          quantity_value: adjustKg,
-          quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
-          unit: adjustKg < 1 ? "g" : "kg",
-          expiry: newExpiryDate,
-          created_at: serverTimestamp()
-        });
-    }
-    // --- 5. STANDARD UPDATE (Usage or Utensils) ---
-    else {
-      // For Utensils or Standard Ingredient usage that doesn't hit 0
-      await updateDoc(doc(db, "products", id), {
-        stock: newStock,
-        quantity_value: newStock,
-        quantity: isUtensil ? Math.round(newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
-        unit: isUtensil ? "pcs" : (newStock < 1 ? "g" : "kg")
+      // CREATE THE NEWEST BATCH
+      const today = new Date().toISOString().split('T')[0];
+      const newExpiryDate = prompt(`Enter Expiry for NEW batch:`, today);
+      if (!newExpiryDate) return;
+
+      await addDoc(collection(db, "products"), {
+        sku: baseSKU + "-N",
+        name: cleanName + " (New)",
+        category: p.category,
+        price: p.price,
+        stock: adjustKg,
+        quantity_value: adjustKg,
+        quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
+        unit: adjustKg < 1 ? "g" : "kg",
+        expiry: newExpiryDate,
+        created_at: serverTimestamp()
       });
+
+    } 
+    // --- SCENARIO: REDUCING STOCK (USAGE) ---
+    else {
+      if (newStock <= 0 && !isUtensil) {
+        await deleteDoc(doc(db, "products", id));
+        // Trigger auto-promotion for survivors
+        await handleBatchPromotion(p.sku);
+      } else {
+        await updateDoc(doc(db, "products", id), {
+          stock: newStock,
+          quantity: isUtensil ? Math.round(newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
+          unit: isUtensil ? "pcs" : (newStock < 1 ? "g" : "kg")
+        });
+      }
     }
 
-    // --- 6. RECORD TRANSACTION ---
+    // Record Transaction for Real-Time Analytics
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
-      category: p.category,
+      totalValue: Math.abs(adjustKg * (p.price || 0)),
       change: adjustKg,
-      totalValue: transactionValue, 
       type: adjustKg > 0 ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
 
     loadProducts(); 
   } catch (error) {
-    console.error("Adjustment failed:", error);
+    console.error(error);
   }
 };
 	
