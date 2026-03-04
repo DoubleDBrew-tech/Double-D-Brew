@@ -392,6 +392,7 @@ window.addProduct = function () {
         <label class="small fw-bold">Shelf Life (Expiration):</label>
         <select class="form-select form-select-sm" name="shelfLife">
 		  <option value="keep">Keep Current (${p.expiry || 'N/A'})</option>
+		  <option value="0">Expired</option>
 		  <option value="1">1 Days from Today</option>
 		  <option value="2">2 Days from Today</option>
 		  <option value="5">5 Days from Today</option>
@@ -493,6 +494,7 @@ window.editProduct = function (id) {
         <label class="small fw-bold">Update Expiration (Shelf Life):</label>
         <select class="form-select form-select-sm" name="shelfLife">
           <option value="keep">Keep Current (${p.expiry || 'N/A'})</option>
+		  <option value="0">Expired</option>
 		  <option value="1">1 Days from Today</option>
 		  <option value="2">2 Days from Today</option>
 		  <option value="5">5 Days from Today</option>
@@ -886,6 +888,21 @@ window.showDashboard = function () {
       </div>
     </div>
 
+	<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 shadow-sm text-center">
+      <h6 class="text-muted">Total Sales (Out)</h6>
+      <h2 id="revenueCard" class="text-success">₱0.00</h2>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 shadow-sm text-center">
+      <h6 class="text-muted">Total Purchases (In)</h6>
+      <h2 id="expenseCard" class="text-danger">₱0.00</h2>
+    </div>
+  </div>
+  </div>
+
     <table class="table table-striped align-middle" id="productTable">
       <thead class="table-dark">
         <tr>
@@ -1047,7 +1064,8 @@ function loadRevenueAnalytics() {
   const q = query(collection(db, "transactions"));
 
   const unsubscribe = onSnapshot(q, snapshot => {
-    let revenue = 0;
+    let sales = 0;           // Total value of stock used/sold (negative change)
+    let purchases = 0;       // Total value of stock bought (positive change)
     let totalMovement = 0;
     let productTotals = {};
 
@@ -1056,32 +1074,42 @@ function loadRevenueAnalytics() {
       const changeVal = Number(d.change) || 0;
       const totalVal = Number(d.totalValue) || 0;
 
-      // Revenue: If change is negative (sold/out), add totalValue
+      // Logic for Sales vs. Purchases
       if (changeVal < 0) {
-        revenue += Math.abs(totalVal);
+        // Stock going OUT (Usage/Sales)
+        sales += Math.abs(totalVal);
+      } else if (changeVal > 0) {
+        // Stock coming IN (Bought/Restocked)
+        purchases += Math.abs(totalVal);
       }
 
-      // Movement: Total absolute weight/count moved
+      // Movement: Total absolute volume of activity
       totalMovement += Math.abs(changeVal);
 
-      // Tracking Top Product
+      // Tracking Top Product by total activity
       if (d.productName) {
         productTotals[d.productName] = (productTotals[d.productName] || 0) + Math.abs(changeVal);
       }
     });
 
     // Update UI Elements
-    document.getElementById("revenueCard").innerText = "₱" + revenue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    // Note: Make sure you have an element with id="expenseCard" in your HTML
+    document.getElementById("revenueCard").innerText = "₱" + sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    
+    const expenseEl = document.getElementById("expenseCard");
+    if (expenseEl) {
+      expenseEl.innerText = "₱" + purchases.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    }
+
     document.getElementById("movementCard").innerText = totalMovement.toFixed(2) + " KG";
 
-    const products = Object.keys(productTotals);
-    const top = products.sort((a, b) => productTotals[b] - productTotals[a])[0];
+    const productKeys = Object.keys(productTotals);
+    const top = productKeys.sort((a, b) => productTotals[b] - productTotals[a])[0];
     document.getElementById("topProductCard").innerText = top || "-";
   });
 
   activeListeners.push(unsubscribe);
 }
-
 /**
  * 4. INGREDIENT USAGE
  */
@@ -1128,6 +1156,13 @@ window.showAnalytics = function () {
         </div>
         <button class="btn btn-secondary" id="backDashboard">⬅ Back</button>
       </div>
+
+	  <div class="col-md-3">
+  <div class="card p-3 shadow-sm text-center">
+    <h6 class="text-muted">Total Purchases (In)</h6>
+    <h2 id="expenseCard" class="text-danger">₱0.00</h2>
+  </div>
+</div>
 
       <div class="row mb-4">
         <div class="col-md-4">
