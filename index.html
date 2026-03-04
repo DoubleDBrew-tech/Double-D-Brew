@@ -744,20 +744,32 @@ function renderTable(list) {
     const quantityDisplay = isUtensils ? "—" : (p.quantity ? `${p.quantity} ${p.unit}` : "—");
 
     // 2. Expiry & Countdown Logic
-    let expiryHTML = '—';
+let expiryHTML = '—';
     if (p.category === 'ingredient' && p.expiry && p.expiry !== "N/A") {
-      const expDate = new Date(p.expiry);
-      const diffTime = expDate - now;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      // 1. Get "Now" but set time to midnight to compare only dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      let badgeClass = "bg-info text-dark"; // Default
+      // 2. Parse the expiry date and set its time to midnight
+      const expDate = new Date(p.expiry);
+      expDate.setHours(0, 0, 0, 0);
+
+      // 3. Calculate the difference in milliseconds, then convert to days
+      const diffTime = expDate.getTime() - today.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      let badgeClass = "bg-info text-dark"; 
       let countdownText = `${diffDays} days left`;
 
+      // 4. Threshold Logic
       if (diffDays < 0) {
-        badgeClass = "bg-danger";
+        badgeClass = "bg-danger"; // 🔥 RED
         countdownText = "EXPIRED";
+      } else if (diffDays === 0) {
+        badgeClass = "bg-danger"; // 🔥 RED (Expires today)
+        countdownText = "EXPIRES TODAY";
       } else if (diffDays <= 7) {
-        badgeClass = "bg-warning text-dark";
+        badgeClass = "bg-warning text-dark"; // ⚠️ YELLOW
         countdownText = "Expiring Soon!";
       }
 
@@ -768,7 +780,6 @@ function renderTable(list) {
         </div>
       `;
     }
-
     // 3. Return Table Row
     return `
       <tr>
