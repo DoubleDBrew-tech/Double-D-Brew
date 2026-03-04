@@ -376,6 +376,8 @@ async function loadProducts() {
 // ADD PRO
 // ADD PRO
 window.addProduct = function () {
+  const today = new Date().toISOString().split('T')[0];
+
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
     <form id="addForm">
@@ -396,14 +398,10 @@ window.addProduct = function () {
 
       <div id="ingredientFields">
         <div class="p-2 border rounded mb-2 bg-light">
-          <label class="small fw-bold text-primary">Shelf Life (Expiration):</label>
-          <select class="form-select form-select-sm" name="shelfLife">
-            <option value="1">1 Day</option>
-            <option value="7">7 Days</option>
-            <option value="30" selected>30 Days</option>
-            <option value="90">90 Days</option>
-          </select>
+          <label class="small fw-bold text-primary">Expiration Date:</label>
+          <input type="date" class="form-control form-control-sm" name="expiryDate" min="${today}" required>
         </div>
+        
         <label class="small fw-bold">Starting Quantity:</label>
         <div class="input-group mb-2">
           <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="e.g. 1.5">
@@ -439,6 +437,9 @@ window.addProduct = function () {
     document.getElementById("ingredientFields").style.display = isIngredient ? "block" : "none";
     document.getElementById("utensilFields").style.display = isIngredient ? "none" : "block";
     document.getElementById("priceLabelText").innerText = isIngredient ? "Price (Per KG):" : "Price (Per Piece):";
+    
+    // Make expiry required only for ingredients
+    document.getElementsByName("expiryDate")[0].required = isIngredient;
   };
 
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
@@ -451,13 +452,13 @@ async function saveNewProduct(e) {
   const price = parseFloat(form.price.value);
   const newSku = form.sku.value.trim();
 
-  // 🛡️ SECURITY CHECK 1: Prevent manual use of batch suffixes
+  // 🛡️ SKU VALIDATION: Prevent manual batch suffixes
   if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
     alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for the batching system.");
     return;
   }
 
-  // 🛡️ SECURITY CHECK 2: Prevent Duplicate SKUs
+  // 🛡️ SKU VALIDATION: Prevent Duplicate SKUs
   const skuExists = products.some(p => p.sku.toLowerCase() === newSku.toLowerCase());
   if (skuExists) {
     alert(`❌ SKU Error: The SKU "${newSku}" is already assigned to another product.`);
@@ -470,28 +471,23 @@ async function saveNewProduct(e) {
   let expiryDate = "N/A";
 
   if (category === "utensil") {
-    // 1 stock = 100 pieces
     const piecesInput = parseFloat(form.pieces.value) || 0;
     finalStock = piecesInput / 100; 
     finalQuantity = piecesInput; 
     finalUnit = "pcs";
+    expiryDate = "N/A";
   } else {
-    // KG/G conversion
     const qtyInput = parseFloat(form.quantity.value) || 0;
     const unitInput = form.unit.value;
     finalStock = unitInput === "g" ? qtyInput / 1000 : qtyInput;
     finalQuantity = qtyInput;
     finalUnit = unitInput;
 
-    const shelfLife = form.shelfLife.value;
-    const d = new Date();
-    d.setDate(d.getDate() + parseInt(shelfLife));
-    expiryDate = d.toISOString().split('T')[0];
+    // 🔥 Use the custom date picked by the user
+    expiryDate = form.expiryDate.value || "N/A";
   }
 
   try {
-    // We save as the original SKU. 
-    // The -N and -P will only be added later via the Adjust Stock function.
     await addDoc(collection(db, "products"), {
       sku: newSku,
       name: form.name.value,
@@ -523,6 +519,8 @@ window.editProduct = function (id) {
   
   // Strip suffixes for editing so the user sees the "Base SKU"
   const baseSku = (p.sku || "").replace("-N", "").replace("-P", "");
+  // Get today's date in YYYY-MM-DD format for the 'min' attribute
+  const today = new Date().toISOString().split('T')[0];
 
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
@@ -545,15 +543,12 @@ window.editProduct = function (id) {
       </select>
 
       <div id="editIngredientFields" style="display: ${isUtensil ? 'none' : 'block'};">
-        <div class="p-2 border rounded mb-2 bg-light text-primary">
-          <label class="small fw-bold">Update Expiration (Shelf Life):</label>
-          <select class="form-select form-select-sm" name="shelfLife">
-            <option value="keep" selected>Keep Current Expiry (${p.expiry || 'N/A'})</option>
-            <option value="1">Reset: 1 Day from Today</option>
-            <option value="7">Reset: 7 Days from Today</option>
-            <option value="30">Reset: 30 Days from Today</option>
-            <option value="90">Reset: 90 Days from Today</option>
-          </select>
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold text-primary">Expiration Date:</label>
+          <input type="date" class="form-control form-control-sm" name="customExpiry" 
+            min="${today}" 
+            value="${p.expiry && p.expiry !== 'N/A' ? p.expiry : ''}">
+          <small class="text-muted" style="font-size: 0.75rem;">Current: ${p.expiry || 'N/A'}</small>
         </div>
 
         <label class="small fw-bold">Quantity:</label>
@@ -594,7 +589,7 @@ window.editProduct = function (id) {
   document.getElementById("editForm").addEventListener("submit", updateProduct);
 };
 
-	async function updateProduct(e) {
+async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
   const productId = form.elements['id'].value; 
@@ -603,13 +598,12 @@ window.editProduct = function (id) {
   const originalProduct = products.find(x => x.id === productId);
   if (!originalProduct) return alert("❌ Error: Product not found.");
 
-  // 🛡️ SKU VALIDATION: Don't allow manual -N or -P
+  // 🛡️ SKU VALIDATION
   if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
     alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for batches.");
     return;
   }
 
-  // 🛡️ SKU CONFLICT CHECK: Does another product already use this SKU?
   const isDuplicate = products.some(p => p.sku.toLowerCase() === newSku.toLowerCase() && p.id !== productId);
   if (isDuplicate) {
     alert(`❌ SKU Error: The SKU "${newSku}" is already used by another product.`);
@@ -638,22 +632,17 @@ window.editProduct = function (id) {
     
     // Auto-formatting logic
     if (unit === "g" && qtyInput >= 1000) {
-      finalQuantity = qtyInput / 1000;
-      finalUnit = "kg";
+      finalQuantity = qtyInput / 1000; finalUnit = "kg";
     } else if (unit === "kg" && qtyInput < 1) {
-      finalQuantity = Math.round(qtyInput * 1000);
-      finalUnit = "g";
+      finalQuantity = Math.round(qtyInput * 1000); finalUnit = "g";
     } else {
-      finalQuantity = qtyInput;
-      finalUnit = unit;
+      finalQuantity = qtyInput; finalUnit = unit;
     }
 
-    // Expiry Update
-    const shelfLife = form.shelfLife.value;
-    if (shelfLife !== "keep") {
-      const d = new Date();
-      d.setDate(d.getDate() + parseInt(shelfLife));
-      expiryDate = d.toISOString().split('T')[0];
+    // 🔥 NEW EXPIRY LOGIC: Take value from date picker
+    const customDate = form.customExpiry.value;
+    if (customDate) {
+      expiryDate = customDate;
     }
   }
 
@@ -735,15 +724,23 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
       // 🔥 CREATE NEW BATCH IF ADDING STOCK
       if (adjustKg > 0) {
-        const shelfLifeInput = prompt(`New batch for ${p.name}.\nHow many days until expiry?`, "30");
-        if (shelfLifeInput === null) return; 
+        // User inputs expiration date manually (YYYY-MM-DD)
+        const today = new Date().toISOString().split('T')[0];
+        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiration Date (YYYY-MM-DD):`, today);
+        
+        if (!newExpiryDate) return; // Cancel if user closes prompt
 
-        const shelfLife = parseInt(shelfLifeInput);
-        if (isNaN(shelfLife) || shelfLife < 0) return alert("❌ Invalid Expiry.");
+        // Validation: Check if it's a valid date and not in the past
+        const selectedDate = new Date(newExpiryDate);
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
 
-        const d = new Date();
-        d.setDate(d.getDate() + shelfLife);
-        const newExpiryDate = d.toISOString().split('T')[0];
+        if (isNaN(selectedDate.getTime())) {
+            return alert("❌ Invalid Date format. Please use YYYY-MM-DD.");
+        }
+        if (selectedDate < todayDate) {
+            return alert("❌ Error: Expiration date cannot be in the past.");
+        }
 
         // Clean base name and SKU to prevent stacking tags (e.g., SKU-N-P)
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
@@ -766,14 +763,14 @@ window.applyAdjust = async function (id, value, isCustom = false) {
           quantity_value: adjustKg,
           quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
           unit: adjustKg < 1 ? "g" : "kg",
-          expiry: newExpiryDate,
+          expiry: newExpiryDate, // Manually entered date
           created_at: serverTimestamp()
         });
 
         alert(`✅ New batch created: SKU ${baseSKU}-N`);
       } 
       
-      // 🔥 IF DECREASING STOCK (USAGE) - Standard Update
+      // 🔥 IF DECREASING STOCK (USAGE)
       else {
         await updateDoc(doc(db, "products", id), {
           stock: newStock,
@@ -922,9 +919,9 @@ function renderTable(list) {
           <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-3</button>
           <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-2</button>
           <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
-          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
-          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
           <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+3</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
         </li>
         <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
         <li class="px-2">
