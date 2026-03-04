@@ -375,26 +375,22 @@ async function loadProducts() {
 
 // ADD PRO
 // ADD PRO
-window.addProduct = function (id) {
-  const p = products.find(x => x.id === id) || {};
-
+window.addProduct = function () {
   document.getElementById("main").innerHTML = `
-    <h3>Edit Product</h3>
-    <form id="editForm">
-      <input type="hidden" name="id" value="${p.id}">
-      <input class="form-control mb-2" name="sku" value="${p.sku ?? ''}" placeholder="SKU" required>
-      <input class="form-control mb-2" name="name" value="${p.name ?? ''}" placeholder="Name" required>
-      <input class="form-control mb-2" name="description" value="${p.description ?? ''}" placeholder="Description">
+    <h3>Add New Product</h3>
+    <form id="addForm">
+      <input class="form-control mb-2" name="sku" placeholder="SKU" required>
+      <input class="form-control mb-2" name="name" placeholder="Name" required>
+      <input class="form-control mb-2" name="description" placeholder="Description">
 
-      <select class="form-control mb-2" name="category" id="editCategory" onchange="toggleEditExpiry()" required>
-        <option value="ingredient" ${p.category==="ingredient"?"selected":""}>Ingredient</option>
-        <option value="utensil" ${p.category==="utensil"?"selected":""}>Utensil</option>
+      <select class="form-control mb-2" name="category" id="addCategory" onchange="toggleAddExpiry()" required>
+        <option value="ingredient">Ingredient</option>
+        <option value="utensil">Utensil</option>
       </select>
 
-      <div id="editExpiryDiv" class="p-2 border rounded mb-2 bg-light" style="display: ${p.category === 'ingredient' ? 'block' : 'none'};">
-        <label class="small fw-bold">Update Expiration (Shelf Life):</label>
+      <div id="addExpiryDiv" class="p-2 border rounded mb-2 bg-light">
+        <label class="small fw-bold">Shelf Life (Expiration):</label>
         <select class="form-select form-select-sm" name="shelfLife">
-          <option value="keep">Keep Current (${p.expiry || 'N/A'})</option>
           <option value="7">7 Days from Today</option>
           <option value="30" selected>30 Days from Today</option>
           <option value="90">90 Days from Today</option>
@@ -402,34 +398,31 @@ window.addProduct = function (id) {
       </div>
 
       <div class="input-group mb-2">
-        <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${p.quantity ?? ''}" required>
+        <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity" required>
         <select class="form-select" name="unit" required>
-          <option value="kg" ${p.unit==="kg"?"selected":""}>kg</option>
-          <option value="g" ${p.unit==="g"?"selected":""}>grams</option>
+          <option value="kg">kg</option>
+          <option value="g">grams</option>
         </select>
       </div>
 
-      <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" min="0" required>
+      <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" min="0" required>
       
-      <button class="btn btn-primary">Update Product</button>
+      <button class="btn btn-primary">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
   `;
 
-  // Listener to show/hide expiry based on category choice
-  window.toggleEditExpiry = function() {
-    const cat = document.getElementById("editCategory").value;
-    document.getElementById("editExpiryDiv").style.display = (cat === "ingredient") ? "block" : "none";
+  window.toggleAddExpiry = function() {
+    const cat = document.getElementById("addCategory").value;
+    document.getElementById("addExpiryDiv").style.display = (cat === "ingredient") ? "block" : "none";
   };
 
-  document.getElementById("editForm").addEventListener("submit", updateProduct);
+  document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 };
 
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
-  const productId = form.id.value;
-  const originalProduct = products.find(x => x.id === productId);
 
   let quantityInput = parseFloat(form.quantity.value);
   let unit = form.unit.value;
@@ -441,43 +434,37 @@ async function saveNewProduct(e) {
   let finalUnit = unit;
   let finalQuantity = quantityInput;
 
-  if (unit === "g" && quantityInput >= 1000) {
-    quantity_value = quantityInput / 1000;
-    finalUnit = "kg";
-    finalQuantity = quantity_value;
-  } else if (unit === "kg" && quantityInput < 1) {
-    finalUnit = "g";
-    finalQuantity = quantityInput * 1000;
-  }
-
-  // Automatic Expiry Logic
-  let expiryDate = originalProduct.expiry || "N/A";
+  // Automatic Expiry Logic for New Items
+  let expiryDate = "N/A";
   if (category === "ingredient") {
     const shelfLife = form.shelfLife.value;
-    if (shelfLife !== "keep") {
-      const d = new Date();
-      d.setDate(d.getDate() + parseInt(shelfLife));
-      expiryDate = d.toISOString().split('T')[0];
-    }
-  } else {
-    expiryDate = "N/A"; // Utensils don't expire
+    const d = new Date();
+    d.setDate(d.getDate() + parseInt(shelfLife));
+    expiryDate = d.toISOString().split('T')[0];
   }
 
-  const newP = {
-    sku: form.sku.value,
-    name: form.name.value,
-    description: form.description.value,
-    category: category,
-    quantity: finalQuantity,
-    unit: finalUnit,
-    quantity_value: quantity_value,
-    stock: quantity_value,
-    price: price,
-    expiry: expiryDate // Updated field
-  };
+  try {
+    // 🔥 Use addDoc for NEW products
+    await addDoc(collection(db, "products"), {
+      sku: form.sku.value,
+      name: form.name.value,
+      description: form.description.value,
+      category: category,
+      quantity: finalQuantity,
+      unit: finalUnit,
+      quantity_value: quantity_value,
+      stock: quantity_value,
+      price: price,
+      expiry: expiryDate
+    });
 
-  alert("✅ Product updated!");
-  loadProducts();
+    alert("✅ New product added!");
+    showDashboard(); // Return to main view
+    loadProducts();  // Refresh list
+  } catch (error) {
+    console.error("Error adding product:", error);
+    alert("❌ Failed to save product.");
+  }
 }
 
 // EDIT PRO
@@ -535,8 +522,18 @@ window.editProduct = function (id) {
 async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
-  const productId = form.id.value;
+  
+  // 1. Correctly grab the ID from the hidden input
+  const productId = form.elements['id'].value; 
+  
+  // 2. Safety check: Find the product in our local array
   const originalProduct = products.find(x => x.id === productId);
+
+  if (!originalProduct) {
+    console.error("Product not found for ID:", productId);
+    alert("❌ Error: Could not find the product to update.");
+    return;
+  }
 
   let quantityInput = parseFloat(form.quantity.value);
   let unit = form.unit.value;
@@ -554,10 +551,10 @@ async function updateProduct(e) {
     finalQuantity = quantity_value;
   } else if (unit === "kg" && quantityInput < 1) {
     finalUnit = "g";
-    finalQuantity = quantityInput * 1000;
+    finalQuantity = Math.round(quantityInput * 1000);
   }
 
-  // Automatic Expiry Logic
+  // 3. Safe Expiry Logic
   let expiryDate = originalProduct.expiry || "N/A";
   if (category === "ingredient") {
     const shelfLife = form.shelfLife.value;
@@ -567,26 +564,32 @@ async function updateProduct(e) {
       expiryDate = d.toISOString().split('T')[0];
     }
   } else {
-    expiryDate = "N/A"; // Utensils don't expire
+    expiryDate = "N/A"; 
   }
 
   const ref = doc(db, "products", productId);
 
-  await updateDoc(ref, {
-    sku: form.sku.value,
-    name: form.name.value,
-    description: form.description.value,
-    category: category,
-    quantity: finalQuantity,
-    unit: finalUnit,
-    quantity_value: quantity_value,
-    stock: quantity_value,
-    price: price,
-    expiry: expiryDate // Updated field
-  });
+  try {
+    await updateDoc(ref, {
+      sku: form.sku.value,
+      name: form.name.value,
+      description: form.description.value,
+      category: category,
+      quantity: finalQuantity,
+      unit: finalUnit,
+      quantity_value: quantity_value,
+      stock: quantity_value,
+      price: price,
+      expiry: expiryDate 
+    });
 
-  alert("✅ Product updated!");
-  loadProducts();
+    alert("✅ Product updated!");
+    showDashboard(); // Return to dashboard
+    loadProducts();  // Refresh data
+  } catch (error) {
+    console.error("Update failed:", error);
+    alert("❌ Failed to update database.");
+  }
 }
 
 // DELETE
