@@ -391,6 +391,8 @@ window.addProduct = function () {
       <div id="addExpiryDiv" class="p-2 border rounded mb-2 bg-light">
         <label class="small fw-bold">Shelf Life (Expiration):</label>
         <select class="form-select form-select-sm" name="shelfLife">
+		  <option value="keep">Keep Current (${p.expiry || 'N/A'})</option>
+		  <option value="1">1 Days from Today</option>
 		  <option value="2">2 Days from Today</option>
 		  <option value="5">5 Days from Today</option>
           <option value="7">7 Days from Today</option>
@@ -491,6 +493,7 @@ window.editProduct = function (id) {
         <label class="small fw-bold">Update Expiration (Shelf Life):</label>
         <select class="form-select form-select-sm" name="shelfLife">
           <option value="keep">Keep Current (${p.expiry || 'N/A'})</option>
+		  <option value="1">1 Days from Today</option>
 		  <option value="2">2 Days from Today</option>
 		  <option value="5">5 Days from Today</option>
           <option value="7">7 Days from Today</option>
