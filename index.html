@@ -614,6 +614,7 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
   let adjustKg = 0;
 
+  // 1. Calculate the adjustment amount in KG
   if (isCustom) {
     const grams = parseFloat(value);
     if (isNaN(grams)) {
@@ -638,42 +639,59 @@ window.applyAdjust = async function (id, value, isCustom = false) {
     return;
   }
 
-  const ref = doc(db, "products", id);
-
-  // 🔥 ATOMIC SAFE UPDATE
-  await updateDoc(ref, {
-    quantity_value: increment(adjustKg),
-    stock: increment(adjustKg)
-  });
-
-  // 🔥 GET FINAL VALUE FOR DISPLAY UPDATE
-  const finalKg = newKg;
-
-  let finalUnit = "kg";
-  let finalQuantity = finalKg;
-
-  if (finalKg > 0 && finalKg < 1) {
-    finalUnit = "g";
-    finalQuantity = Math.round(finalKg * 1000);
+  // 2. EXPIRY LOGIC: If adding stock (+), ask for new expiry
+  let newExpiry = p.expiry || "N/A";
+  if (adjustKg > 0 && p.category === "ingredient") {
+    const shelfLife = prompt(`You are adding stock to ${p.name}.\nHow many days from today will this new batch expire?`, "30");
+    
+    if (shelfLife !== null && shelfLife !== "") {
+      const d = new Date();
+      d.setDate(d.getDate() + parseInt(shelfLife));
+      newExpiry = d.toISOString().split('T')[0];
+    }
   }
 
-  await updateDoc(ref, {
-    quantity: finalQuantity,
-    unit: finalUnit
-  });
+  // 3. Determine display Unit and Quantity
+  let finalUnit = "kg";
+  let finalQuantity = newKg;
+  if (newKg > 0 && newKg < 1) {
+    finalUnit = "g";
+    finalQuantity = Math.round(newKg * 1000);
+  }
 
-  // 🔥 SERVER TIME (NOT CLIENT TIME)
-await addDoc(collection(db, "transactions"), {
-  productId: id,
-  productName: p.name,
-  category: p.category,
-  change: adjustKg,
-  price: p.price || 0,
-  totalValue: (adjustKg * (p.price || 0)),
-  timestamp: serverTimestamp()
-});
+  const ref = doc(db, "products", id);
 
-  loadProducts();
+  try {
+    // 4. Update Product (Combined into ONE call for speed)
+    await updateDoc(ref, {
+      quantity_value: newKg, // Using the calculated newKg for accuracy
+      stock: newKg,
+      quantity: finalQuantity,
+      unit: finalUnit,
+      expiry: newExpiry
+    });
+
+    // 5. Record Transaction for Analytics
+    await addDoc(collection(db, "transactions"), {
+      productId: id,
+      productName: p.name,
+      category: p.category,
+      change: adjustKg,
+      price: p.price || 0,
+      totalValue: Math.abs(adjustKg * (p.price || 0)), // Ensure value is positive for revenue/expense
+      timestamp: serverTimestamp()
+    });
+
+    // Success feedback
+    if (adjustKg > 0) {
+        alert(`✅ Stock Added! New Expiry: ${newExpiry}`);
+    }
+
+    loadProducts();
+  } catch (error) {
+    console.error("Adjustment failed:", error);
+    alert("❌ Error updating stock.");
+  }
 };
 
 // Stock Color
