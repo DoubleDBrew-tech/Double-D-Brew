@@ -611,15 +611,6 @@ window.deleteProduct = async function (id) {
 };
 
 // Adjust
-This is the fixed applyAdjust function. I have integrated your two new rules:
-
-For Utensils: It treats stock as sets (where 1 unit = 100 pieces) and disables the gram/kg conversion.
-
-For Ingredients (Increase): Instead of updating the old product, it renames the current one to (Previous) and creates a brand-new entry for the new batch with its own expiry date, keeping the SKU and Price the same.
-
-For Ingredients (Decrease): It functions as normal, subtracting from the current stock.
-
-JavaScript
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
