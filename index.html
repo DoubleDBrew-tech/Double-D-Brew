@@ -616,14 +616,24 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
   // 1. Calculate the adjustment amount in KG
   if (isCustom) {
-    const grams = parseFloat(value);
+    let grams = parseFloat(value);
+    
+    // 🔥 NEW: Check if the user typed a negative sign in the custom box
+    if (grams < 0) {
+      alert("❌ Negative numbers are not allowed! Please enter a positive amount.");
+      return; 
+    }
+
     if (isNaN(grams)) {
       alert("Invalid grams value!");
       return;
     }
     adjustKg = grams / 1000;
   } else {
-    const kg = parseFloat(value);
+    // 🔥 NEW: Ensure the fixed buttons (like +1) are treated as absolute positive numbers
+    // This prevents any accidental negative values from the UI
+    const kg = Math.abs(parseFloat(value)); 
+    
     if (isNaN(kg)) {
       alert("Invalid value!");
       return;
@@ -634,11 +644,6 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   const currentKg = p.quantity_value || 0;
   const newKg = parseFloat((currentKg + adjustKg).toFixed(3));
 
-  if (newKg < 0) {
-    alert("❌ Quantity cannot go below 0 kg!");
-    return;
-  }
-
   // 2. EXPIRY LOGIC: If adding stock (+), ask for new expiry
   let newExpiry = p.expiry || "N/A";
   if (adjustKg > 0 && p.category === "ingredient") {
@@ -646,7 +651,9 @@ window.applyAdjust = async function (id, value, isCustom = false) {
     
     if (shelfLife !== null && shelfLife !== "") {
       const d = new Date();
-      d.setDate(d.getDate() + parseInt(shelfLife));
+      // Ensure shelfLife input is also positive
+      const days = Math.abs(parseInt(shelfLife));
+      d.setDate(d.getDate() + days);
       newExpiry = d.toISOString().split('T')[0];
     }
   }
@@ -662,9 +669,9 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   const ref = doc(db, "products", id);
 
   try {
-    // 4. Update Product (Combined into ONE call for speed)
+    // 4. Update Product
     await updateDoc(ref, {
-      quantity_value: newKg, // Using the calculated newKg for accuracy
+      quantity_value: newKg,
       stock: newKg,
       quantity: finalQuantity,
       unit: finalUnit,
@@ -676,13 +683,12 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       productId: id,
       productName: p.name,
       category: p.category,
-      change: adjustKg,
+      change: adjustKg, // This will now always be positive
       price: p.price || 0,
-      totalValue: Math.abs(adjustKg * (p.price || 0)), // Ensure value is positive for revenue/expense
+      totalValue: (adjustKg * (p.price || 0)),
       timestamp: serverTimestamp()
     });
 
-    // Success feedback
     if (adjustKg > 0) {
         alert(`✅ Stock Added! New Expiry: ${newExpiry}`);
     }
