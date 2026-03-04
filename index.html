@@ -763,8 +763,8 @@ function renderTable(list) {
         <td>${isUtensils ? `${pieces.toLocaleString()} pcs` : `—`}</td>
         <td>₱${price.toFixed(2)}</td>
         <td>${quantityDisplay}</td>
-        <td>${expiryHTML}</td>
         <td>₱${totalValue}</td>
+		<td>${expiryHTML}</td>
         <td>
           <div class="d-flex gap-1">
             <div class="dropdown">
@@ -774,10 +774,14 @@ function renderTable(list) {
               <ul class="dropdown-menu p-2" style="min-width: 180px;">
                 <li class="fw-bold px-2 small">Quick Adjust (KG/Units)</li>
                 <li class="d-flex justify-content-between px-2 my-1 gap-1">
-                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
+                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-1</button>
+				  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-1</button>
+				  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
                   <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
+				  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+1</button>
+				  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+1</button>
                 </li>
-                <li class="fw-bold px-2 mt-2 small">Custom (Grams/ML)</li>
+                <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
                 <li class="px-2">
                   <input type="number" id="custom-${p.id}" class="form-control form-control-sm mb-2" placeholder="e.g. 300 or -300">
                   <button class="btn btn-sm btn-primary w-100" 
