@@ -375,7 +375,7 @@ async function loadProducts() {
 
 // ADD PRO
 // ADD PRO
-window.editProduct = function (id) {
+window.saveNewProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
 
   document.getElementById("main").innerHTML = `
@@ -425,7 +425,7 @@ window.editProduct = function (id) {
   document.getElementById("editForm").addEventListener("submit", updateProduct);
 };
 
-async function updateProduct(e) {
+async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
   const productId = form.id.value;
