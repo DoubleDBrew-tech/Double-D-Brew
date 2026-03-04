@@ -398,9 +398,8 @@ window.addProduct = function () {
             <option value="90">90 Days</option>
           </select>
         </div>
-
         <div class="input-group mb-2">
-          <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity">
+          <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity (e.g. 1.5)">
           <select class="form-select" name="unit">
             <option value="kg">kg</option>
             <option value="g">grams</option>
@@ -408,7 +407,15 @@ window.addProduct = function () {
         </div>
       </div>
 
-      <input class="form-control mb-2" name="price" id="priceLabel" placeholder="Price" type="number" step="0.01" min="0" required>
+      <div id="utensilFields" style="display:none;">
+        <div class="p-2 border rounded mb-2 bg-light text-center">
+          <label class="small fw-bold d-block">Utensil Stocking</label>
+          <input class="form-control" name="pieces" type="number" min="0" placeholder="Enter number of Pieces">
+          <small class="text-muted">Note: 100 pieces = 1.00 stock</small>
+        </div>
+      </div>
+
+      <input class="form-control mb-2" name="price" id="priceLabel" placeholder="Price per KG" type="number" step="0.01" min="0" required>
       
       <button class="btn btn-primary">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
@@ -420,32 +427,40 @@ window.addProduct = function () {
     const isIngredient = (cat === "ingredient");
     
     document.getElementById("ingredientFields").style.display = isIngredient ? "block" : "none";
+    document.getElementById("utensilFields").style.display = isIngredient ? "none" : "block";
     document.getElementById("priceLabel").placeholder = isIngredient ? "Price per KG" : "Price per Piece";
   };
 
-  // Run once to set initial state
   window.toggleAddFields();
-
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 };
-
+	
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
-
-  let quantityInput = parseFloat(form.quantity.value);
-  let unit = form.unit.value;
-  let price = parseFloat(form.price.value);
-  let category = form.category.value;
-
-  // Unit conversion to KG
-  let quantity_value = unit === "g" ? quantityInput / 1000 : quantityInput;
-  let finalUnit = unit;
-  let finalQuantity = quantityInput;
-
-  // Automatic Expiry Logic for New Items
+  const category = form.category.value;
+  const price = parseFloat(form.price.value);
+  
+  let finalStock = 0;
+  let finalQuantity = 0;
+  let finalUnit = "";
   let expiryDate = "N/A";
-  if (category === "ingredient") {
+
+  if (category === "utensil") {
+    // UTENSIL LOGIC: 1 stock = 100 pieces
+    // User enters pieces, we calculate stock
+    const piecesInput = parseFloat(form.pieces.value) || 0;
+    finalStock = piecesInput / 100; 
+    finalQuantity = piecesInput; // Store pieces count here
+    finalUnit = "pcs";
+  } else {
+    // INGREDIENT LOGIC: KG/G conversion
+    const qtyInput = parseFloat(form.quantity.value) || 0;
+    const unitInput = form.unit.value;
+    finalStock = unitInput === "g" ? qtyInput / 1000 : qtyInput;
+    finalQuantity = qtyInput;
+    finalUnit = unitInput;
+
     const shelfLife = form.shelfLife.value;
     const d = new Date();
     d.setDate(d.getDate() + parseInt(shelfLife));
@@ -453,7 +468,6 @@ async function saveNewProduct(e) {
   }
 
   try {
-    // 🔥 Use addDoc for NEW products
     await addDoc(collection(db, "products"), {
       sku: form.sku.value,
       name: form.name.value,
@@ -461,15 +475,16 @@ async function saveNewProduct(e) {
       category: category,
       quantity: finalQuantity,
       unit: finalUnit,
-      quantity_value: quantity_value,
-      stock: quantity_value,
+      quantity_value: finalStock, // Keeping both for compatibility with your existing code
+      stock: finalStock,
       price: price,
-      expiry: expiryDate
+      expiry: expiryDate,
+      created_at: serverTimestamp()
     });
 
     alert("✅ New product added!");
-    showDashboard(); // Return to main view
-    loadProducts();  // Refresh list
+    showDashboard();
+    loadProducts();
   } catch (error) {
     console.error("Error adding product:", error);
     alert("❌ Failed to save product.");
@@ -480,6 +495,7 @@ async function saveNewProduct(e) {
 // EDIT PRO
 window.editProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
+  const isUtensil = p.category === "utensil";
 
   document.getElementById("main").innerHTML = `
     <h3>Edit Product</h3>
@@ -494,18 +510,19 @@ window.editProduct = function (id) {
         <option value="utensil" ${p.category === "utensil" ? "selected" : ""}>Utensil</option>
       </select>
 
-      <div id="editIngredientFields" style="display: ${p.category === 'ingredient' ? 'block' : 'none'};">
+      <div id="editIngredientFields" style="display: ${isUtensil ? 'none' : 'block'};">
         <div class="p-2 border rounded mb-2 bg-light">
           <label class="small fw-bold">Update Expiration (Shelf Life):</label>
           <select class="form-select form-select-sm" name="shelfLife">
             <option value="keep" selected>Keep Current Expiry</option>
             <option value="7">7 Days from Today</option>
             <option value="30">30 Days from Today</option>
+            <option value="90">90 Days from Today</option>
           </select>
         </div>
 
         <div class="input-group mb-2">
-          <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${p.quantity ?? ''}">
+          <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${!isUtensil ? (p.quantity ?? '') : ''}" placeholder="Quantity">
           <select class="form-select" name="unit">
             <option value="kg" ${p.unit === "kg" ? "selected" : ""}>kg</option>
             <option value="g" ${p.unit === "g" ? "selected" : ""}>grams</option>
@@ -513,7 +530,14 @@ window.editProduct = function (id) {
         </div>
       </div>
 
-      <label class="small fw-bold">Price (${p.category === 'utensil' ? 'Per Piece' : 'Per KG'}):</label>
+      <div id="editUtensilFields" style="display: ${isUtensil ? 'block' : 'none'};">
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold">Pieces (100 pieces = 1.00 stock):</label>
+          <input class="form-control" name="pieces" type="number" min="0" value="${isUtensil ? (p.stock * 100) : ''}" placeholder="Enter Pieces">
+        </div>
+      </div>
+
+      <label class="small fw-bold" id="priceLabelText">Price (${isUtensil ? 'Per Piece' : 'Per KG'}):</label>
       <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" min="0" required>
       
       <button class="btn btn-primary">Update Product</button>
@@ -523,63 +547,68 @@ window.editProduct = function (id) {
 
   window.toggleEditFields = function() {
     const cat = document.getElementById("editCategory").value;
-    document.getElementById("editIngredientFields").style.display = (cat === "ingredient") ? "block" : "none";
+    const isIng = (cat === "ingredient");
+    document.getElementById("editIngredientFields").style.display = isIng ? "block" : "none";
+    document.getElementById("editUtensilFields").style.display = isIng ? "none" : "block";
+    document.getElementById("priceLabelText").innerText = isIng ? "Price (Per KG):" : "Price (Per Piece):";
   };
 
   document.getElementById("editForm").addEventListener("submit", updateProduct);
 };
 
-async function updateProduct(e) {
+	async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
-  
-  // 1. Correctly grab the ID from the hidden input
   const productId = form.elements['id'].value; 
-  
-  // 2. Safety check: Find the product in our local array
   const originalProduct = products.find(x => x.id === productId);
 
-  if (!originalProduct) {
-    console.error("Product not found for ID:", productId);
-    alert("❌ Error: Could not find the product to update.");
-    return;
-  }
+  if (!originalProduct) return alert("❌ Error: Product not found.");
 
-  let quantityInput = parseFloat(form.quantity.value);
-  let unit = form.unit.value;
-  let price = parseFloat(form.price.value);
   let category = form.category.value;
-
-  // Unit conversion to KG
-  let quantity_value = unit === "g" ? quantityInput / 1000 : quantityInput;
-  let finalUnit = unit;
-  let finalQuantity = quantityInput;
-
-  if (unit === "g" && quantityInput >= 1000) {
-    quantity_value = quantityInput / 1000;
-    finalUnit = "kg";
-    finalQuantity = quantity_value;
-  } else if (unit === "kg" && quantityInput < 1) {
-    finalUnit = "g";
-    finalQuantity = Math.round(quantityInput * 1000);
-  }
-
-  // 3. Safe Expiry Logic
+  let price = parseFloat(form.price.value);
+  
+  let finalStock = 0;
+  let finalQuantity = 0;
+  let finalUnit = "";
   let expiryDate = originalProduct.expiry || "N/A";
-  if (category === "ingredient") {
+
+  if (category === "utensil") {
+    // UTENSIL LOGIC: Pieces to Stock conversion
+    let piecesInput = parseFloat(form.pieces.value) || 0;
+    finalStock = piecesInput / 100; // 1 stock = 100 pieces
+    finalQuantity = piecesInput;
+    finalUnit = "pcs";
+    expiryDate = "N/A";
+  } else {
+    // INGREDIENT LOGIC: KG/G conversion
+    let qtyInput = parseFloat(form.quantity.value) || 0;
+    let unit = form.unit.value;
+    
+    finalStock = (unit === "g") ? qtyInput / 1000 : qtyInput;
+    
+    // Auto-formatting units for display
+    if (unit === "g" && qtyInput >= 1000) {
+      finalQuantity = qtyInput / 1000;
+      finalUnit = "kg";
+    } else if (unit === "kg" && qtyInput < 1) {
+      finalQuantity = Math.round(qtyInput * 1000);
+      finalUnit = "g";
+    } else {
+      finalQuantity = qtyInput;
+      finalUnit = unit;
+    }
+
+    // Expiry Update
     const shelfLife = form.shelfLife.value;
     if (shelfLife !== "keep") {
       const d = new Date();
       d.setDate(d.getDate() + parseInt(shelfLife));
       expiryDate = d.toISOString().split('T')[0];
     }
-  } else {
-    expiryDate = "N/A"; 
   }
 
-  const ref = doc(db, "products", productId);
-
   try {
+    const ref = doc(db, "products", productId);
     await updateDoc(ref, {
       sku: form.sku.value,
       name: form.name.value,
@@ -587,15 +616,15 @@ async function updateProduct(e) {
       category: category,
       quantity: finalQuantity,
       unit: finalUnit,
-      quantity_value: quantity_value,
-      stock: quantity_value,
+      quantity_value: finalStock,
+      stock: finalStock, // Restricted: calculated from pieces/quantity
       price: price,
       expiry: expiryDate 
     });
 
-    alert("✅ Product updated!");
-    showDashboard(); // Return to dashboard
-    loadProducts();  // Refresh data
+    alert("✅ Product updated successfully!");
+    showDashboard();
+    loadProducts();
   } catch (error) {
     console.error("Update failed:", error);
     alert("❌ Failed to update database.");
@@ -616,91 +645,95 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   if (!p) return;
 
   const isUtensil = p.category.toLowerCase() === "utensil";
-  let adjustAmount = parseFloat(value);
+  let adjustValue = parseFloat(value);
 
-  // 1. Calculate Adjustment Amount
-  if (isUtensil) {
-    // Utensils use whole numbers (sets). No gram conversion.
-    if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
-  } else {
-    // Ingredients: Convert custom gram input to KG
-    if (isCustom) {
-      adjustAmount = adjustAmount / 1000;
-    }
-    if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
-  }
-
-  const isIncrease = adjustAmount > 0;
-  const currentStock = parseFloat(p.stock || 0);
-  const newStock = parseFloat((currentStock + adjustAmount).toFixed(3));
-
-  // Safety Check: Prevent negative stock
-  if (newStock < 0) {
-    alert(`❌ Adjustment failed. Insufficient stock.`);
-    return;
-  }
+  if (isNaN(adjustValue)) return alert("❌ Invalid value!");
 
   try {
-    // --- SCENARIO A: INCREASING INGREDIENT (CREATE NEW BATCH) ---
-    if (!isUtensil && isIncrease) {
-      const shelfLifeInput = prompt(`New batch for ${p.name}.\nHow many days from today will this expire?`, "30");
-      if (shelfLifeInput === null) return; // Cancelled
+    // --- SCENARIO 1: UTENSILS (Adjust by Pieces) ---
+    if (isUtensil) {
+      // 1 stock = 100 pieces. Current pieces = stock * 100
+      const currentPieces = Math.round((p.stock || 0) * 100);
+      const newPieces = currentPieces + adjustValue;
 
-      const shelfLife = parseInt(shelfLifeInput);
-      if (isNaN(shelfLife) || shelfLife < 0) return alert("❌ Invalid Expiry.");
-
-      const d = new Date();
-      d.setDate(d.getDate() + shelfLife);
-      const newExpiryDate = d.toISOString().split('T')[0];
-
-      // 1. Rename the current product to (Previous)
-      const oldRef = doc(db, "products", id);
-      const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
-      await updateDoc(oldRef, { 
-        name: cleanName + " (Previous)" 
-      });
-
-      // 2. Create the NEW product entry (Batching)
-      await addDoc(collection(db, "products"), {
-        sku: p.sku,
-        name: cleanName + " (New)",
-        description: p.description || "",
-        category: p.category,
-        price: p.price,
-        stock: adjustAmount, // The new batch starts with just the added amount
-        quantity_value: adjustAmount,
-        quantity: adjustAmount < 1 ? Math.round(adjustAmount * 1000) : adjustAmount,
-        unit: adjustAmount < 1 ? "g" : "kg",
-        expiry: newExpiryDate,
-        created_at: serverTimestamp()
-      });
-
-      alert(`✅ New batch created: ${cleanName} (New)`);
-    } 
-    
-    // --- SCENARIO B: DECREASING INGREDIENT OR ANY UTENSIL CHANGE ---
-    else {
-      const ref = doc(db, "products", id);
-      let updateData = {
-        stock: newStock,
-        quantity_value: newStock
-      };
-
-      if (!isUtensil) {
-        updateData.unit = newStock < 1 ? "g" : "kg";
-        updateData.quantity = newStock < 1 ? Math.round(newStock * 1000) : newStock;
+      if (newPieces < 0) {
+        alert(`❌ Adjustment failed. You only have ${currentPieces} pieces left.`);
+        return;
       }
 
-      await updateDoc(ref, updateData);
-      alert(`✅ Stock updated. Current: ${isUtensil ? newStock : updateData.quantity + updateData.unit}`);
+      const newStock = newPieces / 100;
+
+      await updateDoc(doc(db, "products", id), {
+        stock: newStock,
+        quantity_value: newStock,
+        quantity: newPieces,
+        unit: "pcs"
+      });
+
+      alert(`✅ Utensil updated: ${newPieces} pieces total.`);
+    } 
+
+    // --- SCENARIO 2: INGREDIENTS (Batching Logic) ---
+    else {
+      let adjustKg = isCustom ? adjustValue / 1000 : adjustValue;
+      const isIncrease = adjustKg > 0;
+      const currentStock = parseFloat(p.stock || 0);
+      const newStock = parseFloat((currentStock + adjustKg).toFixed(3));
+
+      if (newStock < 0) {
+        alert(`❌ Adjustment failed. Insufficient stock.`);
+        return;
+      }
+
+      if (isIncrease) {
+        // --- INCREASE INGREDIENT: CREATE NEW BATCH ---
+        const shelfLifeInput = prompt(`New batch for ${p.name}.\nHow many days until expiry?`, "30");
+        if (shelfLifeInput === null) return;
+
+        const shelfLife = parseInt(shelfLifeInput);
+        if (isNaN(shelfLife) || shelfLife < 0) return alert("❌ Invalid Expiry.");
+
+        const d = new Date();
+        d.setDate(d.getDate() + shelfLife);
+        const newExpiryDate = d.toISOString().split('T')[0];
+
+        // Rename old to (Previous)
+        const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
+        await updateDoc(doc(db, "products", id), { name: cleanName + " (Previous)" });
+
+        // Create New Entry
+        await addDoc(collection(db, "products"), {
+          sku: p.sku,
+          name: cleanName + " (New)",
+          description: p.description || "",
+          category: p.category,
+          price: p.price,
+          stock: adjustKg,
+          quantity_value: adjustKg,
+          quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
+          unit: adjustKg < 1 ? "g" : "kg",
+          expiry: newExpiryDate,
+          created_at: serverTimestamp()
+        });
+        alert("✅ New batch created successfully.");
+      } else {
+        // --- DECREASE INGREDIENT: STANDARD UPDATE ---
+        await updateDoc(doc(db, "products", id), {
+          stock: newStock,
+          quantity_value: newStock,
+          quantity: newStock < 1 ? Math.round(newStock * 1000) : newStock,
+          unit: newStock < 1 ? "g" : "kg"
+        });
+        alert("✅ Stock decreased.");
+      }
     }
 
     // Record Transaction
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
-      change: adjustAmount,
-      type: isIncrease ? "Restock" : "Usage",
+      change: adjustValue,
+      type: adjustValue > 0 ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
 
