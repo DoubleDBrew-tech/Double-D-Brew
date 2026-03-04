@@ -720,13 +720,18 @@ function renderTable(list) {
   now.setHours(0, 0, 0, 0); // Normalize time for accurate daily comparison
 
   tbody.innerHTML = list.map(p => {
-    // 1. Calculations
+    // 1. Calculations & Type Safety
     const price = (typeof p.price === 'number') ? p.price : 0;
     const stock = (typeof p.stock === 'number') ? p.stock : 0;
     const isUtensils = (p.category === "utensil");
+    
+    // Utensils: 1 stock = 100 pieces. Total Value = Price * Stock.
     const pieces = isUtensils ? (stock * 100) : 0;
     const totalValue = (price * stock).toFixed(2);
-    const quantityDisplay = p.quantity ? `${p.quantity} ${p.unit}` : "—";
+
+    // Dynamic Display for KG/Unit Column
+    // Per your request: "In utensils i want you to remove the kg part"
+    const quantityDisplay = isUtensils ? "—" : (p.quantity ? `${p.quantity} ${p.unit}` : "—");
 
     // 2. Expiry & Countdown Logic
     let expiryHTML = '—';
@@ -763,8 +768,8 @@ function renderTable(list) {
         <td>${isUtensils ? `${pieces.toLocaleString()} pcs` : `—`}</td>
         <td>₱${price.toFixed(2)}</td>
         <td>${quantityDisplay}</td>
-        <td>₱${totalValue}</td>
-		<td>${expiryHTML}</td>
+        <td>₱${Number(totalValue).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td>${expiryHTML}</td>
         <td>
           <div class="d-flex gap-1">
             <div class="dropdown">
@@ -774,12 +779,12 @@ function renderTable(list) {
               <ul class="dropdown-menu p-2" style="min-width: 180px;">
                 <li class="fw-bold px-2 small">Quick Adjust (KG/Units)</li>
                 <li class="d-flex justify-content-between px-2 my-1 gap-1">
-                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-1</button>
-				  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-1</button>
-				  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
+                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-3</button>
+                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-2</button>
+                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
                   <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
-				  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+1</button>
-				  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+1</button>
+                  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
+                  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+3</button>
                 </li>
                 <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
                 <li class="px-2">
@@ -821,9 +826,12 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
+  // Filter list by category first to calculate dynamic stats
   const list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
-  let totalItems = list.reduce((sum, p) => sum + (p.stock || 0), 0);
-  let totalValue = list.reduce((sum, p) => sum + ((p.stock || 0) * (p.price || 0)), 0);
+  
+  // Calculate stats based on the filtered list
+  let totalItems = list.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  let totalValue = list.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -831,16 +839,15 @@ window.showDashboard = function () {
         <h4>Inventory Dashboard</h4>
       </div>
       <div class="d-flex align-items-center">
-    <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
-    <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-    <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
-    <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-    <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
-	<button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
+        <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+        <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+        <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
+        <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
+        <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+        <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
       </div>
     </div>
 
-    <!-- Search Bar -->
     <div class="input-group mb-3">
       <span class="input-group-text">🔍</span>
       <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku, category, kg, stock...)" onkeyup="filterProducts()">
@@ -849,7 +856,7 @@ window.showDashboard = function () {
     <div class="row mb-4">
       <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Products</h5><h2>${list.length}</h2></div></div>
       <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Value</h5><h2>₱${totalValue.toFixed(2)}</h2></div></div>
+      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Value</h5><h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2></div></div>
     </div>
 
     <table class="table table-striped align-middle" id="productTable">
@@ -860,17 +867,16 @@ window.showDashboard = function () {
           <th>Stock</th>
           <th>Pieces</th>
           <th>Price</th>
-          <th>KG</th>
+          <th>KG / Info</th>
           <th>Total Value</th>
-		  <th>Expiry Status</th>
+          <th>Expiry Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody id="productTableBody"></tbody>
     </table>
   `;
-
-  // SearchI & FilterRender
+//Search and FIlter
   const input = document.getElementById("searchInput");
   if (input) input.value = searchQuery || "";
   applyFiltersAndRender();
