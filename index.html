@@ -470,7 +470,7 @@ if (unit === "kg" && quantityInput < 1) {
   unit: finalUnit,
   quantity_value: quantity_value, // ALWAYS in kg
   stock: quantity_value, // stock = kg
-  price: price
+  price: price,
   expiry: expiryDate, // Automatically added
   createdAt: serverTimestamp()
 };
@@ -574,7 +574,7 @@ async function updateProduct(e) {
     unit: finalUnit,
     quantity_value: quantity_value,
     stock: quantity_value,
-    price: price
+    price: price,
     expiry: expiryDate, // Automatically added
     createdAt: serverTimestamp()
   
