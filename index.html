@@ -396,6 +396,13 @@ window.addProduct = function () {
           <option value="g">grams</option>
         </select>
       </div>
+	  
+	<select class="form-control mb-2" name="shelfLife" id="shelfLife">
+	    <option value="30">Default Expiry (30 Days)</option>
+ 	    <option value="7">Short Term (7 Days)</option>
+    	<option value="90">Long Term (90 Days)</option>
+ 	    <option value="365">1 Year</option>
+	</select>
 
       <input class="form-control mb-2" name="price" type="number" step="0.01" min="0" placeholder="Price" required>
       
@@ -411,7 +418,8 @@ window.addProduct = function () {
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
-
+	
+let expiryDate = null;
 let quantityInput = parseFloat(form.quantity.value);
 let unit = form.unit.value;
 let price = parseFloat(form.price.value);
@@ -425,6 +433,20 @@ if (isNaN(price) || price < 0) {
   alert("❌ Invalid price!");
   return;
 }
+	// Expiry
+	if (form.category.value === "ingredient") {
+    const days = parseInt(form.shelfLife.value) || 30;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    expiryDate = d.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  }
+	const newP = {
+    // ... (existing fields)
+    expiry: expiryDate, // Automatically added
+    createdAt: serverTimestamp()
+  };
+
+  await addDoc(collection(db, "products"), newP);
 
 // convert to kg
 let quantity_value = unit === "g"
@@ -684,6 +706,8 @@ function renderTable(list) {
   if (!tbody) return;
 
   tbody.innerHTML = list.map(p => {
+	const expiryDisplay = p.expiry ? p.expiry : "N/A";
+	const isExpired = p.expiry && new Date(p.expiry) < new Date();
     const price = (typeof p.price === 'number') ? p.price : 0;
     const stock = (typeof p.stock === 'number') ? p.stock : 0;
     const isUtensils = (p.category === "utensil");
@@ -711,6 +735,12 @@ function renderTable(list) {
         <td>
           ${quantityDisplay}
         </td>
+		
+		<td>
+	  ${p.category === 'ingredient' ? 
+	    `<span class="badge ${isExpired ? 'bg-danger' : 'bg-info'}">${expiryDisplay}</span>` 
+	    : '—'}
+		</td>
 
         <td>₱${totalValue}</td>
 
@@ -1060,18 +1090,44 @@ window.showAnalytics = function () {
   startRealtimeChart("weekly"); // Default view
 
   // 4. Attach Events
-  document.getElementById("exportPDF").addEventListener("click", () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text("Inventory Report", 20, 20);
-    doc.setFontSize(12);
-    doc.text("Generated on: " + new Date().toLocaleString(), 20, 30);
-    doc.text("Total Revenue: " + document.getElementById("revenueCard").innerText, 20, 50);
-    doc.text("Total Movement: " + document.getElementById("movementCard").innerText, 20, 60);
-    doc.text("Top Performing Product: " + document.getElementById("topProductCard").innerText, 20, 70);
-    doc.save("inventory-report.pdf");
-  });
+ document.getElementById("exportPDF").addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const now = new Date();
+  const timestamp = now.toLocaleString();
+  const fileDate = now.toISOString().split('T')[0];
+
+  // Title & Header
+  doc.setFontSize(22);
+  doc.setTextColor(214, 139, 0); // Mango Orange
+  doc.text("Double'd Brew Inventory Report", 20, 20);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generated on: ${timestamp}`, 20, 30);
+  doc.line(20, 35, 190, 35);
+
+  // Statistics
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text("Summary Metrics:", 20, 45);
+  doc.setFontSize(12);
+  doc.text(`- Total Revenue: ${document.getElementById("revenueCard").innerText}`, 25, 55);
+  doc.text(`- Total Movement: ${document.getElementById("movementCard").innerText}`, 25, 65);
+  doc.text(`- Top Performing Product: ${document.getElementById("topProductCard").innerText}`, 25, 75);
+
+  // Capture the Chart
+  const chartCanvas = document.getElementById('analyticsChart');
+  if (chartCanvas) {
+    const chartImage = chartCanvas.toDataURL("image/png", 1.0);
+    doc.text("Visual Analytics:", 20, 90);
+    // addImage(image, format, x, y, width, height)
+    doc.addImage(chartImage, 'PNG', 15, 95, 180, 90);
+  }
+
+  // Save with timestamp in filename
+  doc.save(`DoubleD'Brew_Report_${fileDate}.pdf`);
+});
 
   document.querySelectorAll(".chart-btn").forEach(btn => {
     btn.addEventListener("click", () => {
