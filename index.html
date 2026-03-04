@@ -383,43 +383,48 @@ window.addProduct = function () {
       <input class="form-control mb-2" name="name" placeholder="Name" required>
       <input class="form-control mb-2" name="description" placeholder="Description">
 
-      <select class="form-control mb-2" name="category" id="addCategory" onchange="toggleAddExpiry()" required>
+      <select class="form-control mb-2" name="category" id="addCategory" onchange="toggleAddFields()" required>
         <option value="ingredient">Ingredient</option>
         <option value="utensil">Utensil</option>
       </select>
 
-      <div id="addExpiryDiv" class="p-2 border rounded mb-2 bg-light">
-        <label class="small fw-bold">Shelf Life (Expiration):</label>
-        <select class="form-select form-select-sm" name="shelfLife">
-          <option value="-1">Expired</option>
-          <option value="1">1 Day from Today</option>
-          <option value="2">2 Days from Today</option>
-          <option value="5">5 Days from Today</option>
-          <option value="7">7 Days from Today</option>
-          <option value="30" selected>30 Days from Today</option>
-          <option value="90">90 Days from Today</option>
-        </select>
+      <div id="ingredientFields">
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold">Shelf Life (Expiration):</label>
+          <select class="form-select form-select-sm" name="shelfLife">
+            <option value="1">1 Day</option>
+            <option value="7">7 Days</option>
+            <option value="30" selected>30 Days</option>
+            <option value="90">90 Days</option>
+          </select>
+        </div>
+
+        <div class="input-group mb-2">
+          <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity">
+          <select class="form-select" name="unit">
+            <option value="kg">kg</option>
+            <option value="g">grams</option>
+          </select>
+        </div>
       </div>
 
-      <div class="input-group mb-2">
-        <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="Quantity" required>
-        <select class="form-select" name="unit" required>
-          <option value="kg">kg</option>
-          <option value="g">grams</option>
-        </select>
-      </div>
-
-      <input class="form-control mb-2" name="price" placeholder="Price" type="number" step="0.01" min="0" required>
+      <input class="form-control mb-2" name="price" id="priceLabel" placeholder="Price" type="number" step="0.01" min="0" required>
       
       <button class="btn btn-primary">Save Product</button>
       <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
     </form>
   `;
 
-  window.toggleAddExpiry = function() {
+  window.toggleAddFields = function() {
     const cat = document.getElementById("addCategory").value;
-    document.getElementById("addExpiryDiv").style.display = (cat === "ingredient") ? "block" : "none";
+    const isIngredient = (cat === "ingredient");
+    
+    document.getElementById("ingredientFields").style.display = isIngredient ? "block" : "none";
+    document.getElementById("priceLabel").placeholder = isIngredient ? "Price per KG" : "Price per Piece";
   };
+
+  // Run once to set initial state
+  window.toggleAddFields();
 
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 };
@@ -484,32 +489,31 @@ window.editProduct = function (id) {
       <input class="form-control mb-2" name="name" value="${p.name ?? ''}" placeholder="Name" required>
       <input class="form-control mb-2" name="description" value="${p.description ?? ''}" placeholder="Description">
 
-      <select class="form-control mb-2" name="category" id="editCategory" onchange="toggleEditExpiry()" required>
-        <option value="ingredient" ${p.category==="ingredient"?"selected":""}>Ingredient</option>
-        <option value="utensil" ${p.category==="utensil"?"selected":""}>Utensil</option>
+      <select class="form-control mb-2" name="category" id="editCategory" onchange="toggleEditFields()" required>
+        <option value="ingredient" ${p.category === "ingredient" ? "selected" : ""}>Ingredient</option>
+        <option value="utensil" ${p.category === "utensil" ? "selected" : ""}>Utensil</option>
       </select>
 
-      <div id="editExpiryDiv" class="p-2 border rounded mb-2 bg-light" style="display: ${p.category === 'ingredient' ? 'block' : 'none'};">
-        <label class="small fw-bold">Update Expiration (Shelf Life):</label>
-        <select class="form-select form-select-sm" name="shelfLife">
-          <option value="-1">Expired</option>
-		  <option value="1">1 Day from Today</option>
-		  <option value="2">2 Days from Today</option>
-		  <option value="5">5 Days from Today</option>
-          <option value="7">7 Days from Today</option>
-          <option value="30" selected>30 Days from Today</option>
-          <option value="90">90 Days from Today</option>
-        </select>
+      <div id="editIngredientFields" style="display: ${p.category === 'ingredient' ? 'block' : 'none'};">
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold">Update Expiration (Shelf Life):</label>
+          <select class="form-select form-select-sm" name="shelfLife">
+            <option value="keep" selected>Keep Current Expiry</option>
+            <option value="7">7 Days from Today</option>
+            <option value="30">30 Days from Today</option>
+          </select>
+        </div>
+
+        <div class="input-group mb-2">
+          <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${p.quantity ?? ''}">
+          <select class="form-select" name="unit">
+            <option value="kg" ${p.unit === "kg" ? "selected" : ""}>kg</option>
+            <option value="g" ${p.unit === "g" ? "selected" : ""}>grams</option>
+          </select>
+        </div>
       </div>
 
-      <div class="input-group mb-2">
-        <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${p.quantity ?? ''}" required>
-        <select class="form-select" name="unit" required>
-          <option value="kg" ${p.unit==="kg"?"selected":""}>kg</option>
-          <option value="g" ${p.unit==="g"?"selected":""}>grams</option>
-        </select>
-      </div>
-
+      <label class="small fw-bold">Price (${p.category === 'utensil' ? 'Per Piece' : 'Per KG'}):</label>
       <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" min="0" required>
       
       <button class="btn btn-primary">Update Product</button>
@@ -517,10 +521,9 @@ window.editProduct = function (id) {
     </form>
   `;
 
-  // Listener to show/hide expiry based on category choice
-  window.toggleEditExpiry = function() {
+  window.toggleEditFields = function() {
     const cat = document.getElementById("editCategory").value;
-    document.getElementById("editExpiryDiv").style.display = (cat === "ingredient") ? "block" : "none";
+    document.getElementById("editIngredientFields").style.display = (cat === "ingredient") ? "block" : "none";
   };
 
   document.getElementById("editForm").addEventListener("submit", updateProduct);
@@ -608,99 +611,112 @@ window.deleteProduct = async function (id) {
 };
 
 // Adjust
+This is the fixed applyAdjust function. I have integrated your two new rules:
+
+For Utensils: It treats stock as sets (where 1 unit = 100 pieces) and disables the gram/kg conversion.
+
+For Ingredients (Increase): Instead of updating the old product, it renames the current one to (Previous) and creates a brand-new entry for the new batch with its own expiry date, keeping the SKU and Price the same.
+
+For Ingredients (Decrease): It functions as normal, subtracting from the current stock.
+
+JavaScript
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
 
-  let adjustKg = 0;
+  const isUtensil = p.category.toLowerCase() === "utensil";
+  let adjustAmount = parseFloat(value);
 
-  // 1. Calculate the adjustment amount in KG
-  // We ALLOW negative numbers here so you can deduct stock
-  if (isCustom) {
-    const grams = parseFloat(value);
-    if (isNaN(grams)) {
-      alert("❌ Invalid grams value!");
-      return;
-    }
-    adjustKg = grams / 1000;
+  // 1. Calculate Adjustment Amount
+  if (isUtensil) {
+    // Utensils use whole numbers (sets). No gram conversion.
+    if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
   } else {
-    const kg = parseFloat(value);
-    if (isNaN(kg)) {
-      alert("❌ Invalid value!");
-      return;
+    // Ingredients: Convert custom gram input to KG
+    if (isCustom) {
+      adjustAmount = adjustAmount / 1000;
     }
-    adjustKg = kg;
+    if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
   }
 
-  const currentKg = p.quantity_value || 0;
-  const newKg = parseFloat((currentKg + adjustKg).toFixed(3));
+  const isIncrease = adjustAmount > 0;
+  const currentStock = parseFloat(p.stock || 0);
+  const newStock = parseFloat((currentStock + adjustAmount).toFixed(3));
 
-  // 🔥 SAFETY CHECK: Don't let total stock drop below 0
-  if (newKg < 0) {
-    alert(`❌ Adjustment failed. You only have ${currentKg}kg left. You cannot deduct more than what you have.`);
+  // Safety Check: Prevent negative stock
+  if (newStock < 0) {
+    alert(`❌ Adjustment failed. Insufficient stock.`);
     return;
   }
 
-  // 2. EXPIRY LOGIC: Only ask for expiry if we are ADDING stock
-  let newExpiry = p.expiry || "N/A";
-  if (adjustKg > 0 && p.category === "ingredient") {
-    const shelfLifeInput = prompt(`You are adding stock to ${p.name}.\nHow many days from today will this new batch expire?`, "30");
-    
-    // Check if user clicked Cancel
-    if (shelfLifeInput === null) {
-      alert("Adjustment cancelled.");
-      return; 
-    }
-
-    const shelfLife = parseInt(shelfLifeInput);
-
-    // 🔥 VALIDATION: Block negative days for expiry
-    if (isNaN(shelfLife) || shelfLife < 0) {
-      alert("❌ Invalid Expiry. You cannot enter negative days or text for expiration. Adjustment stopped.");
-      return; 
-    }
-
-    const d = new Date();
-    d.setDate(d.getDate() + shelfLife);
-    newExpiry = d.toISOString().split('T')[0];
-  }
-
-  // 3. Determine display Unit and Quantity
-  let finalUnit = "kg";
-  let finalQuantity = newKg;
-  if (newKg > 0 && newKg < 1) {
-    finalUnit = "g";
-    finalQuantity = Math.round(newKg * 1000);
-  }
-
-  const ref = doc(db, "products", id);
-
   try {
-    // 4. Update Product
-    await updateDoc(ref, {
-      quantity_value: newKg,
-      stock: newKg,
-      quantity: finalQuantity,
-      unit: finalUnit,
-      expiry: newExpiry
-    });
+    // --- SCENARIO A: INCREASING INGREDIENT (CREATE NEW BATCH) ---
+    if (!isUtensil && isIncrease) {
+      const shelfLifeInput = prompt(`New batch for ${p.name}.\nHow many days from today will this expire?`, "30");
+      if (shelfLifeInput === null) return; // Cancelled
 
-    // 5. Record Transaction for Analytics
+      const shelfLife = parseInt(shelfLifeInput);
+      if (isNaN(shelfLife) || shelfLife < 0) return alert("❌ Invalid Expiry.");
+
+      const d = new Date();
+      d.setDate(d.getDate() + shelfLife);
+      const newExpiryDate = d.toISOString().split('T')[0];
+
+      // 1. Rename the current product to (Previous)
+      const oldRef = doc(db, "products", id);
+      const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
+      await updateDoc(oldRef, { 
+        name: cleanName + " (Previous)" 
+      });
+
+      // 2. Create the NEW product entry (Batching)
+      await addDoc(collection(db, "products"), {
+        sku: p.sku,
+        name: cleanName + " (New)",
+        description: p.description || "",
+        category: p.category,
+        price: p.price,
+        stock: adjustAmount, // The new batch starts with just the added amount
+        quantity_value: adjustAmount,
+        quantity: adjustAmount < 1 ? Math.round(adjustAmount * 1000) : adjustAmount,
+        unit: adjustAmount < 1 ? "g" : "kg",
+        expiry: newExpiryDate,
+        created_at: serverTimestamp()
+      });
+
+      alert(`✅ New batch created: ${cleanName} (New)`);
+    } 
+    
+    // --- SCENARIO B: DECREASING INGREDIENT OR ANY UTENSIL CHANGE ---
+    else {
+      const ref = doc(db, "products", id);
+      let updateData = {
+        stock: newStock,
+        quantity_value: newStock
+      };
+
+      if (!isUtensil) {
+        updateData.unit = newStock < 1 ? "g" : "kg";
+        updateData.quantity = newStock < 1 ? Math.round(newStock * 1000) : newStock;
+      }
+
+      await updateDoc(ref, updateData);
+      alert(`✅ Stock updated. Current: ${isUtensil ? newStock : updateData.quantity + updateData.unit}`);
+    }
+
+    // Record Transaction
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
-      category: p.category,
-      change: adjustKg,
-      price: p.price || 0,
-      totalValue: Math.abs(adjustKg * (p.price || 0)), 
+      change: adjustAmount,
+      type: isIncrease ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
 
-    alert(`✅ Stock adjusted successfully! Current stock: ${finalQuantity}${finalUnit}`);
     loadProducts();
   } catch (error) {
     console.error("Adjustment failed:", error);
-    alert("❌ Error updating stock.");
+    alert("❌ Error processing adjustment.");
   }
 };
 
@@ -765,7 +781,7 @@ function renderTable(list) {
     
     // Utensils: 1 stock = 100 pieces. Total Value = Price * Stock.
     const pieces = isUtensils ? (stock * 100) : 0;
-    const totalValue = (price * stock).toFixed(2);
+    const totalValue = isUtensils ? (price * pieces) : (price * stock);
 
     // Dynamic Display for KG/Unit Column
     // Per your request: "In utensils i want you to remove the kg part"
