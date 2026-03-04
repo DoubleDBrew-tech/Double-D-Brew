@@ -375,7 +375,7 @@ async function loadProducts() {
 
 // ADD PRO
 // ADD PRO
-window.saveNewProduct = function (id) {
+window.addProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
 
   document.getElementById("main").innerHTML = `
@@ -827,7 +827,9 @@ window.filterProducts = function () {
 // Dashboard
 window.showDashboard = function () {
   // Filter list by category first to calculate dynamic stats
-  const list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
+  const list = (currentCategory === 'all')
+	  ? [...products]
+	  : products.filter(p => p.category === currentCategory);
   
   // Calculate stats based on the filtered list
   let totalItems = list.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
@@ -853,10 +855,25 @@ window.showDashboard = function () {
       <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku, category, kg, stock...)" onkeyup="filterProducts()">
     </div>
 
-    <div class="row mb-4">
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Products</h5><h2>${list.length}</h2></div></div>
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Items</h5><h2>${totalItems}</h2></div></div>
-      <div class="col-md-4"><div class="card p-3 text-center"><h5>Total Value</h5><h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2></div></div>
+<div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card p-3 text-center">
+          <h5>Total Products</h5>
+          <h2>${list.length}</h2>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card p-3 text-center">
+          <h5>Total Items</h5>
+          <h2>${totalItems.toFixed(2)}</h2>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card p-3 text-center">
+          <h5>Total Value</h5>
+          <h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
+        </div>
+      </div>
     </div>
 
     <table class="table table-striped align-middle" id="productTable">
