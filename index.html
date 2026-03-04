@@ -977,12 +977,6 @@ window.filterProducts = function () {
 };
 
 // Dashboard
-You are absolutely right. I missed that your dashboard had three specific stat cards: Total Products, Total Items (Stock), and Total Value.
-
-I have restored those three specific cards and removed all the date-filtering code. This version is exactly like your original dashboard, but it fixes the "blinking/focus" problem so you can type in the search bar smoothly.
-
-Updated showDashboard and applyFiltersAndRender
-JavaScript
 window.showDashboard = function () {
   const mainDiv = document.getElementById("main");
   
