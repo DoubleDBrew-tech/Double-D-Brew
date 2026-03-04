@@ -1,4 +1,4 @@
-l<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1022,23 +1022,44 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
-  // 1. Get current search value so filtering stays active
-  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
+  // 1. Get current values from the UI (checking if elements exist first)
+  const searchInput = document.getElementById("searchInput");
+  const startInput = document.getElementById("startDate");
+  const endInput = document.getElementById("endDate");
 
-  // 2. Apply Category + Search Filter
+  const search = (searchInput?.value || "").toLowerCase();
+  const startDate = startInput?.value || "";
+  const endDate = endInput?.value || "";
+
+  // 2. Apply Category + Search + Date Range Filter
   const filteredList = products.filter(p => {
+    // Category Filter
     const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
+    
+    // Search Filter
     const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
                           (p.sku || "").toLowerCase().includes(search);
-    return matchesCategory && matchesSearch;
+    
+    // Date Range Filter (Specific to Expiry)
+    let matchesDate = true;
+    if (startDate || endDate) {
+      if (!p.expiry) {
+        matchesDate = false; 
+      } else {
+        const expiryDate = p.expiry; // Expecting YYYY-MM-DD
+        if (startDate && expiryDate < startDate) matchesDate = false;
+        if (endDate && expiryDate > endDate) matchesDate = false;
+      }
+    }
+
+    return matchesCategory && matchesSearch && matchesDate;
   });
 
-  // 3. REAL-TIME ANALYTICS CALCULATIONS (Top 3 Cards)
+  // 3. REAL-TIME ANALYTICS CALCULATIONS
   let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
   // 4. Build the UI
-  // NOTE: Removed 'table-responsive' to stop the Adjust menu from being cut off
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inventory Dashboard</h4>
@@ -1052,10 +1073,25 @@ window.showDashboard = function () {
         </div>
     </div>
 
-    <div class="input-group mb-3">
-        <span class="input-group-text">🔍</span>
-        <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" 
-               onkeyup="applyFiltersAndRender()" value="${search}">
+    <div class="card p-3 mb-3 shadow-sm border-0 bg-light">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="small fw-bold text-muted">🔍 Search Name/SKU</label>
+          <input type="text" id="searchInput" class="form-control" placeholder="Type to search..." 
+                 onkeyup="applyFiltersAndRender()" value="${search}">
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted">📅 Expiry Start Date</label>
+          <input type="date" id="startDate" class="form-control" onchange="applyFiltersAndRender()" value="${startDate}">
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted">📅 Expiry End Date</label>
+          <input type="date" id="endDate" class="form-control" onchange="applyFiltersAndRender()" value="${endDate}">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-danger w-100" onclick="clearDateFilters()">✖ Clear Dates</button>
+        </div>
+      </div>
     </div>
 
     <div class="row mb-4">
@@ -1099,18 +1135,35 @@ window.showDashboard = function () {
 
   renderTable(filteredList);
 
-  // Focus-Fix: Keeps cursor in search bar
+  // Focus-Fix: Keeps cursor at the end of the input so search feels natural
   if (search) {
     const input = document.getElementById("searchInput");
     if (input) {
         input.focus();
-        input.setSelectionRange(search.length, search.length);
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
     }
   }
 };
 
-	window.applyFiltersAndRender = function() {
-    showDashboard();
+// 5. GLOBAL FILTER HANDLER
+window.applyFiltersAndRender = function() {
+    window.showDashboard();
+};
+
+// 6. HELPER: Clear Date Filters
+window.clearDateFilters = function() {
+    const start = document.getElementById("startDate");
+    const end = document.getElementById("endDate");
+    if(start) start.value = "";
+    if(end) end.value = "";
+    window.applyFiltersAndRender();
+};
+
+window.applyFiltersAndRender = function() {
+    // We just call showDashboard() because it already contains 
+    // the filtering logic and the card calculations.
+    window.showDashboard();
 };
 	
 	//Real time Analytics
