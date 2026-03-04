@@ -377,65 +377,41 @@ function parseKgInput(input) {
 
 // LOAD PRO
 // Function to clear filters and show all products
-window.resetDateFilter = function() {
-  if(document.getElementById("filterStart")) document.getElementById("filterStart").value = "";
-  if(document.getElementById("filterEnd")) document.getElementById("filterEnd").value = "";
-  if(document.getElementById("searchInput")) document.getElementById("searchInput").value = "";
-  loadProducts();
-};
-
 async function loadProducts() {
   try {
     // 1. Fetch from Firestore (Ordering by newest first)
+    // IMPORTANT: If this fails, it's usually because you need to click the link in the 
+    // Console (F12) to create a Firestore Index.
     const q = query(collection(db, "products"), orderBy("created_at", "desc"));
     const querySnapshot = await getDocs(q);
     
-    products = []; // Sync with the global products array
+    products = []; 
     querySnapshot.forEach((docu) => {
       products.push({ id: docu.id, ...docu.data() });
     });
 
-    // 2. Get Filter Values from UI
-    const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
-    const startDate = document.getElementById("filterStart")?.value || ""; 
-    const endDate = document.getElementById("filterEnd")?.value || "";
+    console.log("Successfully loaded " + products.length + " products.");
 
-    // 3. Apply Filtering logic
-    const filtered = products.filter(p => {
-      const name = (p.name || "").toLowerCase();
-      const sku = (p.sku || "").toLowerCase();
-      
-      const matchesSearch = name.includes(search) || sku.includes(search);
-      
-      let matchesExpiry = true;
-      if (startDate && endDate) {
-        if (p.expiry && p.expiry !== "N/A") {
-          matchesExpiry = (p.expiry >= startDate && p.expiry <= endDate);
-        } else {
-          matchesExpiry = false; 
-        }
-      }
-      return matchesSearch && matchesExpiry;
-    });
-
-    // 4. Update the Dashboard UI components
+    // 2. Trigger UI Update
+    // We call showDashboard because it handles both the Stats cards 
+    // and calls renderTable internally.
     if (typeof showDashboard === "function") {
-      // We call showDashboard to refresh the "Total Value" cards
-      // but we use applyFiltersAndRender logic inside it
       showDashboard(); 
-    } else {
-      renderTable(filtered);
+    } else if (typeof renderTable === "function") {
+      renderTable(products);
     }
 
   } catch (error) {
-    console.error("Firestore Error:", error);
-    // FALLBACK: If orderBy fails due to missing index, load anyway
+    console.error("Firestore OrderBy Error (Index probably missing):", error);
+    
+    // FALLBACK: Load without sorting so the user still sees their data
     const querySnapshot = await getDocs(collection(db, "products"));
     products = [];
     querySnapshot.forEach((docu) => {
       products.push({ id: docu.id, ...docu.data() });
     });
-    showDashboard();
+    
+    if (typeof showDashboard === "function") showDashboard();
   }
 }
 
@@ -756,9 +732,11 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   try {
     if (isUtensil) {
       // --- UTENSIL LOGIC (Pieces) ---
+      // We multiply by 100 because utensils are stored as 0.01 per piece in your stock
       const currentPieces = Math.round((p.stock || 0) * 100);
       const newPieces = currentPieces + adjustAmount;
-      if (newPieces < 0) return alert(`❌ Insufficient pieces.`);
+      if (newPieces < 0) return alert(`❌ Insufficient pieces. You only have ${currentPieces} left.`);
+      
       const newStock = newPieces / 100;
 
       await updateDoc(doc(db, "products", id), {
@@ -767,6 +745,8 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         quantity: newPieces,
         unit: "pcs"
       });
+      alert(`✅ Updated: ${newPieces} pieces total.`);
+
     } else {
       // --- INGREDIENT LOGIC (Batching) ---
       let adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
@@ -775,8 +755,8 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
       if (newStock < 0) return alert("❌ Insufficient stock.");
 
+      // 🔥 CASE A: ADDING STOCK (Restocking creates a NEW batch)
       if (adjustKg > 0) {
-        // --- ADDING STOCK: Create New Batch ---
         const today = new Date().toISOString().split('T')[0];
         const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiry Date (YYYY-MM-DD):`, today);
         if (!newExpiryDate) return;
@@ -784,13 +764,13 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
         const baseSKU = p.sku.replace("-N", "").replace("-P", "");
 
-        // Update current to Previous
+        // 1. Rename current product to "Previous"
         await updateDoc(doc(db, "products", id), { 
             name: cleanName + " (Previous)", 
             sku: baseSKU + "-P" 
         });
 
-        // Add New batch
+        // 2. Create the "New" batch
         await addDoc(collection(db, "products"), {
           sku: baseSKU + "-N",
           name: cleanName + " (New)",
@@ -804,39 +784,42 @@ window.applyAdjust = async function (id, value, isCustom = false) {
           expiry: newExpiryDate,
           created_at: serverTimestamp()
         });
-        alert(`✅ New batch created.`);
-      } else {
-        // --- DEDUCTING STOCK: Cleanup & Promotion Logic ---
+        alert(`✅ Restocked: Current batch moved to 'Previous', new batch created as 'New'.`);
+
+      } 
+      // 🔥 CASE B: DEDUCTING STOCK (Usage)
+      else {
+        // If the Previous batch hits 0, delete it and promote the New batch
         if (newStock === 0 && p.sku.endsWith("-P")) {
           const baseSKU = p.sku.replace("-P", "");
           
-          // 1. Delete the empty "Previous" product
           await deleteDoc(doc(db, "products", id));
 
-          // 2. Find and promote the "New" batch if it exists
+          // Look for the batch waiting in line
           const newBatch = products.find(x => x.sku === baseSKU + "-N");
           if (newBatch) {
             await updateDoc(doc(db, "products", newBatch.id), {
               name: newBatch.name.replace(" (New)", ""),
               sku: baseSKU
             });
-            alert("✅ Previous batch depleted. New batch promoted to Main.");
+            alert("✅ Previous batch finished! New batch promoted to Main.");
           } else {
             alert("✅ Previous batch depleted and removed.");
           }
         } else {
-          // Standard Update
+          // Standard stock deduction
           await updateDoc(doc(db, "products", id), {
             stock: newStock,
             quantity_value: newStock,
             quantity: newStock < 1 ? Math.round(newStock * 1000) : newStock,
             unit: newStock < 1 ? "g" : "kg"
           });
+          alert("✅ Stock deducted.");
         }
       }
     }
 
-    // Record Transaction
+    // 📝 Record Transaction for history
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
@@ -845,12 +828,12 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       timestamp: serverTimestamp()
     });
 
-    loadProducts(); 
+    loadProducts(); // Refresh the table
   } catch (error) {
-    console.error(error);
+    console.error("Adjustment failed:", error);
+    alert("❌ Error: " + error.message);
   }
 };
-
 // Stock Color
 function stockColor(stock) {
   if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
@@ -1036,43 +1019,12 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
-  // 1. Get current filter inputs
-  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
-  const startDate = document.getElementById("filterStart")?.value || "";
-  const endDate = document.getElementById("filterEnd")?.value || "";
-
-  // 2. Apply ALL filters (Category + Search + Date Range)
-  const filteredList = products.filter(p => {
-    // Category Filter
-    const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
-    
-    // Search Filter
-    const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
-                          (p.sku || "").toLowerCase().includes(search);
-    
-    // Date Range Filter
-    let matchesDate = true;
-    if (startDate && endDate) {
-      if (p.expiry && p.expiry !== "N/A") {
-        matchesDate = (p.expiry >= startDate && p.expiry <= endDate);
-      } else {
-        matchesDate = false; 
-      }
-    }
-
-    return matchesCategory && matchesSearch && matchesDate;
-  });
-
-  // 3. Calculate Stats based ONLY on filtered results
-  let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
-  let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
-
-  // 4. Update the UI
-  document.getElementById("main").innerHTML = `
+  // 1. Build the Dashboard Shell (only if it doesn't exist or we need a full refresh)
+  const mainDiv = document.getElementById("main");
+  
+  mainDiv.innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <div>
-        <h4>Inventory Dashboard</h4>
-      </div>
+      <div><h4>Inventory Dashboard</h4></div>
       <div class="d-flex align-items-center">
         <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
         <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
@@ -1088,7 +1040,56 @@ window.showDashboard = function () {
       <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" onkeyup="applyFiltersAndRender()">
     </div>
 
-    <div class="row mb-4">
+    <div class="row mb-4" id="statsContainer">
+       </div>
+
+    <table class="table table-striped align-middle border" id="productTable">
+      <thead class="table-dark">
+        <tr>
+          <th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th>
+          <th>Price</th><th>KG / Info</th><th>Total Value</th>
+          <th>Expiry Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="productTableBody">
+         </tbody>
+    </table>
+  `;
+
+  // 2. Immediately run the filter to fill the empty shell
+  applyFiltersAndRender();
+};
+
+	window.applyFiltersAndRender = function() {
+  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
+  const startDate = document.getElementById("filterStart")?.value || "";
+  const endDate = document.getElementById("filterEnd")?.value || "";
+
+  // 1. Filter Logic
+  const filteredList = products.filter(p => {
+    const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
+    const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
+                          (p.sku || "").toLowerCase().includes(search);
+    
+    let matchesDate = true;
+    if (startDate && endDate) {
+      if (p.expiry && p.expiry !== "N/A") {
+        matchesDate = (p.expiry >= startDate && p.expiry <= endDate);
+      } else {
+        matchesDate = false; 
+      }
+    }
+    return matchesCategory && matchesSearch && matchesDate;
+  });
+
+  // 2. Calculate Stats
+  let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
+
+  // 3. Update Stats Cards ONLY
+  const statsContainer = document.getElementById("statsContainer");
+  if (statsContainer) {
+    statsContainer.innerHTML = `
       <div class="col-md-4">
         <div class="card p-3 text-center shadow-sm">
           <h5 class="text-muted">Filtered Products</h5>
@@ -1097,7 +1098,7 @@ window.showDashboard = function () {
       </div>
       <div class="col-md-4">
         <div class="card p-3 text-center shadow-sm">
-          <h5 class="text-muted">Total Stock (KG/Units)</h5>
+          <h5 class="text-muted">Total Stock</h5>
           <h2>${totalItems.toFixed(2)}</h2>
         </div>
       </div>
@@ -1107,35 +1108,13 @@ window.showDashboard = function () {
           <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
         </div>
       </div>
-    </div>
+    `;
+  }
 
-    <table class="table table-striped align-middle border" id="productTable">
-      <thead class="table-dark">
-        <tr>
-          <th>SKU</th>
-          <th>Name</th>
-          <th>Stock</th>
-          <th>Pieces</th>
-          <th>Price</th>
-          <th>KG / Info</th>
-          <th>Total Value</th>
-          <th>Expiry Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="productTableBody"></tbody>
-    </table>
-  `;
-
-  // 5. Render the actual rows into the table
+  // 4. Update Table Rows ONLY
   renderTable(filteredList);
 };
-	window.applyFiltersAndRender = function() {
-    // This ensures that every time you type in the search box, 
-    // the Total Value and Total Items cards update immediately.
-    showDashboard();
-};
-
+	
 	//Real time Analytics
 // Global array to manage real-time listeners
 let activeListeners = [];
