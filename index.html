@@ -692,7 +692,7 @@ window.applyAdjust = async function (id, value, isCustom = false) {
     let newStock;
     let adjustKg;
 
-    // --- 1. CALCULATE NEW STOCK ---
+    // --- 1. CALCULATE CHANGE ---
     if (isUtensil) {
       const currentPieces = Math.round((p.stock || 0) * 100);
       const newPieces = currentPieces + adjustAmount;
@@ -706,47 +706,45 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       if (newStock < 0) return alert("❌ Insufficient stock.");
     }
 
-    // --- 2. HANDLE REVENUE/PURCHASE VALUE (For Real-Time Analytics) ---
-    // We must save 'totalValue' in the transaction so the Analytics page can see it
+    // --- 2. VALUE FOR ANALYTICS ---
+    // This ensures Total Revenue and Total Purchases cards change in real-time
     const transactionValue = Math.abs(adjustKg * (p.price || 0));
 
     // --- 3. AUTO-DELETE & BATCH PROMOTION ---
     if (newStock <= 0) {
-      // DELETE the empty product
+      // Delete the current empty product
       await deleteDoc(doc(db, "products", id));
       
-      // If this was a "Previous" batch, find the "New" one and promote it
-      if (p.sku.endsWith("-P")) {
+      // If the finished product was a "Previous" batch, promote the "New" one
+      if (p.sku.endsWith("-P") || p.name.includes("(Previous)")) {
         const baseSKU = p.sku.replace("-P", "");
         const newBatch = products.find(x => x.sku === baseSKU + "-N");
         
         if (newBatch) {
           await updateDoc(doc(db, "products", newBatch.id), {
-            name: newBatch.name.replace(" (New)", ""), // Remove (New)
-            sku: baseSKU // Remove -N
+            name: newBatch.name.replace(" (New)", ""), 
+            sku: baseSKU 
           });
-          alert(`✅ ${p.name} finished. ${newBatch.name} is now the primary batch.`);
-        } else {
-          alert(`✅ ${p.name} deleted (Stock reached 0).`);
+          alert(`✅ ${p.name} empty. ${newBatch.name} promoted to primary.`);
         }
       }
     } 
-    // --- 4. CREATE NEW BATCH IF ADDING STOCK ---
+    // --- 4. CREATE NEW BATCH (RESTOCK) ---
     else if (adjustKg > 0 && !isUtensil) {
         const today = new Date().toISOString().split('T')[0];
-        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiry (YYYY-MM-DD):`, today);
+        const newExpiryDate = prompt(`Restocking ${p.name}.\nEnter Expiry (YYYY-MM-DD):`, today);
         if (!newExpiryDate) return;
 
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
         const baseSKU = p.sku.replace("-N", "").replace("-P", "");
 
-        // Update Current to Previous
+        // Turn current stock into "Previous"
         await updateDoc(doc(db, "products", id), { 
             name: cleanName + " (Previous)", 
             sku: baseSKU + "-P" 
         });
 
-        // Add the New batch
+        // Add the new stock as a "New" batch
         await addDoc(collection(db, "products"), {
           sku: baseSKU + "-N",
           name: cleanName + " (New)",
@@ -761,7 +759,7 @@ window.applyAdjust = async function (id, value, isCustom = false) {
           created_at: serverTimestamp()
         });
     }
-    // --- 5. STANDARD UPDATE ---
+    // --- 5. STANDARD UPDATE (USAGE) ---
     else {
       await updateDoc(doc(db, "products", id), {
         stock: newStock,
@@ -771,13 +769,14 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       });
     }
 
-    // --- 6. RECORD TRANSACTION (Fixed for Analytics) ---
+    // --- 6. RECORD TRANSACTION ---
+    // Saving totalValue ensures the "Analytics" logic sees the money change
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
       category: p.category,
       change: adjustKg,
-      totalValue: transactionValue, // THIS FIXES YOUR ANALYTICS
+      totalValue: transactionValue, 
       type: adjustKg > 0 ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
@@ -989,6 +988,7 @@ window.showDashboard = function () {
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
   // 4. Build the UI
+  // NOTE: Removed 'table-responsive' to stop the Adjust menu from being cut off
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inventory Dashboard</h4>
@@ -1029,24 +1029,22 @@ window.showDashboard = function () {
         </div>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-striped align-middle border">
-          <thead class="table-dark">
-              <tr>
-                  <th>SKU</th>
-                  <th>Name</th>
-                  <th>Stock</th>
-                  <th>Pieces</th>
-                  <th>Price</th>
-                  <th>KG / Info</th>
-                  <th>Total Value</th>
-                  <th>Expiry Status</th>
-                  <th>Actions</th>
-              </tr>
-          </thead>
-          <tbody id="productTableBody"></tbody>
-      </table>
-    </div>
+    <table class="table table-striped align-middle border">
+        <thead class="table-dark">
+            <tr>
+                <th>SKU</th>
+                <th>Name</th>
+                <th>Stock</th>
+                <th>Pieces</th>
+                <th>Price</th>
+                <th>KG / Info</th>
+                <th>Total Value</th>
+                <th>Expiry Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+    </table>
   `;
 
   renderTable(filteredList);
