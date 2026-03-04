@@ -239,15 +239,10 @@ body {
       <div class="d-flex ms-auto">
 
 		  <!-- Filtering Start Date to End Date -->
-<div class="d-flex align-items-center gap-2 me-3 p-2 rounded" style="background: rgba(255,255,255,0.2);">
-  <span class="small fw-bold text-white">Expiring Between:</span>
-  
-  <input type="date" id="filterStart" class="form-control form-control-sm" style="width: 140px;">
-  <span class="text-white">to</span>
-  <input type="date" id="filterEnd" class="form-control form-control-sm" style="width: 140px;">
-  
-  <button class="btn btn-sm btn-light text-dark fw-bold" onclick="loadProducts()">Filter</button>
-  <button class="btn btn-sm btn-outline-light" onclick="resetDateFilter()">Clear</button>
+<div class="d-flex align-items-center gap-2">
+  <input type="date" id="filterStart" class="form-control form-control-sm">
+  <input type="date" id="filterEnd" class="form-control form-control-sm">
+  <button class="btn btn-sm btn-dark" onclick="loadProducts()">Filter</button>
 </div>
         <!-- SORTING DROPDOWN -->
         <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:170px;">
