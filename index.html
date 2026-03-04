@@ -373,41 +373,35 @@ function parseKgInput(input) {
 // LOAD PRO
 // Function to clear filters and show all products
 async function loadProducts() {
+  console.log("Attempting to load products...");
   try {
-    // 1. Fetch from Firestore (Ordering by newest first)
-    // IMPORTANT: If this fails, it's usually because you need to click the link in the 
-    // Console (F12) to create a Firestore Index.
+    // 1. Try to load with sorting (this might fail if index is missing)
     const q = query(collection(db, "products"), orderBy("created_at", "desc"));
     const querySnapshot = await getDocs(q);
     
-    products = []; 
+    products = [];
     querySnapshot.forEach((docu) => {
       products.push({ id: docu.id, ...docu.data() });
     });
-
-    console.log("Successfully loaded " + products.length + " products.");
-
-    // 2. Trigger UI Update
-    // We call showDashboard because it handles both the Stats cards 
-    // and calls renderTable internally.
-    if (typeof showDashboard === "function") {
-      showDashboard(); 
-    } else if (typeof renderTable === "function") {
-      renderTable(products);
-    }
+    console.log("Loaded with sorting: ", products.length);
 
   } catch (error) {
-    console.error("Firestore OrderBy Error (Index probably missing):", error);
+    console.error("Sorting failed, falling back to basic load:", error);
     
-    // FALLBACK: Load without sorting so the user still sees their data
+    // 2. FALLBACK: Load without sorting (This ALWAYS works)
     const querySnapshot = await getDocs(collection(db, "products"));
     products = [];
     querySnapshot.forEach((docu) => {
       products.push({ id: docu.id, ...docu.data() });
     });
-    
-    if (typeof showDashboard === "function") showDashboard();
   }
+
+  // 3. Force the UI to show even if filters are weird
+  if (products.length === 0) {
+      console.warn("Database is empty or connection failed.");
+  }
+  
+  showDashboard(); 
 }
 
 // ADD PRO
