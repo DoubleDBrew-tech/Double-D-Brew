@@ -615,17 +615,18 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   let adjustKg = 0;
 
   // 1. Calculate the adjustment amount in KG
+  // We ALLOW negative numbers here so you can deduct stock
   if (isCustom) {
     const grams = parseFloat(value);
-    if (isNaN(grams) || grams <= 0) { // 🔥 Added check: must be greater than 0
-      alert("❌ Please enter a valid positive number of grams!");
+    if (isNaN(grams)) {
+      alert("❌ Invalid grams value!");
       return;
     }
     adjustKg = grams / 1000;
   } else {
     const kg = parseFloat(value);
-    if (isNaN(kg) || kg <= 0) { // 🔥 Added check: must be greater than 0
-      alert("❌ Please enter a valid positive number!");
+    if (isNaN(kg)) {
+      alert("❌ Invalid value!");
       return;
     }
     adjustKg = kg;
@@ -634,22 +635,34 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   const currentKg = p.quantity_value || 0;
   const newKg = parseFloat((currentKg + adjustKg).toFixed(3));
 
-  // 2. EXPIRY LOGIC: If adding stock (+), ask for new expiry
+  // 🔥 SAFETY CHECK: Don't let total stock drop below 0
+  if (newKg < 0) {
+    alert(`❌ Adjustment failed. You only have ${currentKg}kg left. You cannot deduct more than what you have.`);
+    return;
+  }
+
+  // 2. EXPIRY LOGIC: Only ask for expiry if we are ADDING stock
   let newExpiry = p.expiry || "N/A";
   if (adjustKg > 0 && p.category === "ingredient") {
-    const shelfLife = prompt(`You are adding stock to ${p.name}.\nHow many days from today will this new batch expire?`, "30");
+    const shelfLifeInput = prompt(`You are adding stock to ${p.name}.\nHow many days from today will this new batch expire?`, "30");
     
-    // 🔥 FIX: If the user clicks "Cancel" (null), we stop the whole process
-    if (shelfLife === null) {
-      alert("Adjustment cancelled. No stock was added.");
+    // Check if user clicked Cancel
+    if (shelfLifeInput === null) {
+      alert("Adjustment cancelled.");
       return; 
     }
 
-    if (shelfLife !== "") {
-      const d = new Date();
-      d.setDate(d.getDate() + Math.abs(parseInt(shelfLife)));
-      newExpiry = d.toISOString().split('T')[0];
+    const shelfLife = parseInt(shelfLifeInput);
+
+    // 🔥 VALIDATION: Block negative days for expiry
+    if (isNaN(shelfLife) || shelfLife < 0) {
+      alert("❌ Invalid Expiry. You cannot enter negative days or text for expiration. Adjustment stopped.");
+      return; 
     }
+
+    const d = new Date();
+    d.setDate(d.getDate() + shelfLife);
+    newExpiry = d.toISOString().split('T')[0];
   }
 
   // 3. Determine display Unit and Quantity
@@ -672,18 +685,18 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       expiry: newExpiry
     });
 
-    // 5. Record Transaction
+    // 5. Record Transaction for Analytics
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
       category: p.category,
       change: adjustKg,
       price: p.price || 0,
-      totalValue: (adjustKg * (p.price || 0)),
+      totalValue: Math.abs(adjustKg * (p.price || 0)), 
       timestamp: serverTimestamp()
     });
 
-    alert(`✅ Stock Added! New Expiry: ${newExpiry}`);
+    alert(`✅ Stock adjusted successfully! Current stock: ${finalQuantity}${finalUnit}`);
     loadProducts();
   } catch (error) {
     console.error("Adjustment failed:", error);
