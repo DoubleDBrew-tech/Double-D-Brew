@@ -1036,15 +1036,38 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
-  // Filter list by category first to calculate dynamic stats
-  const list = (currentCategory === 'all')
-	  ? [...products]
-	  : products.filter(p => p.category === currentCategory);
-  
-  // Calculate stats based on the filtered list
-  let totalItems = list.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
-  let totalValue = list.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
+  // 1. Get current filter inputs
+  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
+  const startDate = document.getElementById("filterStart")?.value || "";
+  const endDate = document.getElementById("filterEnd")?.value || "";
 
+  // 2. Apply ALL filters (Category + Search + Date Range)
+  const filteredList = products.filter(p => {
+    // Category Filter
+    const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
+    
+    // Search Filter
+    const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
+                          (p.sku || "").toLowerCase().includes(search);
+    
+    // Date Range Filter
+    let matchesDate = true;
+    if (startDate && endDate) {
+      if (p.expiry && p.expiry !== "N/A") {
+        matchesDate = (p.expiry >= startDate && p.expiry <= endDate);
+      } else {
+        matchesDate = false; 
+      }
+    }
+
+    return matchesCategory && matchesSearch && matchesDate;
+  });
+
+  // 3. Calculate Stats based ONLY on filtered results
+  let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
+
+  // 4. Update the UI
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
@@ -1062,31 +1085,31 @@ window.showDashboard = function () {
 
     <div class="input-group mb-3">
       <span class="input-group-text">🔍</span>
-      <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku, category, kg, stock...)" onkeyup="filterProducts()">
+      <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" onkeyup="applyFiltersAndRender()">
     </div>
 
-<div class="row mb-4">
+    <div class="row mb-4">
       <div class="col-md-4">
-        <div class="card p-3 text-center">
-          <h5>Total Products</h5>
-          <h2>${list.length}</h2>
+        <div class="card p-3 text-center shadow-sm">
+          <h5 class="text-muted">Filtered Products</h5>
+          <h2>${filteredList.length}</h2>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card p-3 text-center">
-          <h5>Total Items</h5>
+        <div class="card p-3 text-center shadow-sm">
+          <h5 class="text-muted">Total Stock (KG/Units)</h5>
           <h2>${totalItems.toFixed(2)}</h2>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card p-3 text-center">
-          <h5>Total Value</h5>
-          <h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h2>
+        <div class="card p-3 text-center shadow-sm bg-light">
+          <h5 class="text-muted">Inventory Value</h5>
+          <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
         </div>
       </div>
     </div>
 
-    <table class="table table-striped align-middle" id="productTable">
+    <table class="table table-striped align-middle border" id="productTable">
       <thead class="table-dark">
         <tr>
           <th>SKU</th>
@@ -1103,10 +1126,14 @@ window.showDashboard = function () {
       <tbody id="productTableBody"></tbody>
     </table>
   `;
-//Search and FIlter
-  const input = document.getElementById("searchInput");
-  if (input) input.value = searchQuery || "";
-  applyFiltersAndRender();
+
+  // 5. Render the actual rows into the table
+  renderTable(filteredList);
+};
+	window.applyFiltersAndRender = function() {
+    // This ensures that every time you type in the search box, 
+    // the Total Value and Total Items cards update immediately.
+    showDashboard();
 };
 
 	//Real time Analytics
