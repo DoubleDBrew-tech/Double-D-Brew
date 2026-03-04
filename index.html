@@ -686,16 +686,20 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
   const isUtensil = p.category.toLowerCase() === "utensil";
   let adjustAmount = parseFloat(value);
+
   if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
 
   try {
+    // --- SCENARIO 1: UTENSILS (Pieces Logic) ---
     if (isUtensil) {
-      // --- UTENSIL LOGIC (Pieces) ---
-      // We multiply by 100 because utensils are stored as 0.01 per piece in your stock
       const currentPieces = Math.round((p.stock || 0) * 100);
       const newPieces = currentPieces + adjustAmount;
-      if (newPieces < 0) return alert(`❌ Insufficient pieces. You only have ${currentPieces} left.`);
-      
+
+      if (newPieces < 0) {
+        alert(`❌ Adjustment failed. You only have ${currentPieces} pieces left.`);
+        return;
+      }
+
       const newStock = newPieces / 100;
 
       await updateDoc(doc(db, "products", id), {
@@ -704,95 +708,98 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         quantity: newPieces,
         unit: "pcs"
       });
-      alert(`✅ Updated: ${newPieces} pieces total.`);
 
-    } else {
-      // --- INGREDIENT LOGIC (Batching) ---
+      alert(`✅ Utensil updated: ${newPieces} pieces total.`);
+    } 
+
+    // --- SCENARIO 2: INGREDIENTS (Batching Logic) ---
+    else {
       let adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
       const currentStock = parseFloat(p.stock || 0);
       const newStock = parseFloat((currentStock + adjustKg).toFixed(3));
 
-      if (newStock < 0) return alert("❌ Insufficient stock.");
+      if (newStock < 0) {
+        alert(`❌ Adjustment failed. Insufficient stock.`);
+        return;
+      }
 
-      // 🔥 CASE A: ADDING STOCK (Restocking creates a NEW batch)
+      // 🔥 CREATE NEW BATCH IF ADDING STOCK
       if (adjustKg > 0) {
+        // User inputs expiration date manually (YYYY-MM-DD)
         const today = new Date().toISOString().split('T')[0];
-        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiry Date (YYYY-MM-DD):`, today);
-        if (!newExpiryDate) return;
+        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiration Date (YYYY-MM-DD):`, today);
+        
+        if (!newExpiryDate) return; // Cancel if user closes prompt
 
+        // Validation: Check if it's a valid date and not in the past
+        const selectedDate = new Date(newExpiryDate);
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+
+        if (isNaN(selectedDate.getTime())) {
+            return alert("❌ Invalid Date format. Please use YYYY-MM-DD.");
+        }
+        if (selectedDate < todayDate) {
+            return alert("❌ Error: Expiration date cannot be in the past.");
+        }
+
+        // Clean base name and SKU to prevent stacking tags (e.g., SKU-N-P)
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
         const baseSKU = p.sku.replace("-N", "").replace("-P", "");
 
-        // 1. Rename current product to "Previous"
+        // 1. Update CURRENT product to "Previous" and SKU to "-P"
         await updateDoc(doc(db, "products", id), { 
-            name: cleanName + " (Previous)", 
-            sku: baseSKU + "-P" 
+            name: cleanName + " (Previous)",
+            sku: baseSKU + "-P"
         });
 
-        // 2. Create the "New" batch
+        // 2. Create the NEW product entry with "(New)" and SKU "-N"
         await addDoc(collection(db, "products"), {
           sku: baseSKU + "-N",
           name: cleanName + " (New)",
           description: p.description || "",
           category: p.category,
           price: p.price,
-          stock: adjustKg,
+          stock: adjustKg, 
           quantity_value: adjustKg,
           quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
           unit: adjustKg < 1 ? "g" : "kg",
-          expiry: newExpiryDate,
+          expiry: newExpiryDate, // Manually entered date
           created_at: serverTimestamp()
         });
-        alert(`✅ Restocked: Current batch moved to 'Previous', new batch created as 'New'.`);
 
+        alert(`✅ New batch created: SKU ${baseSKU}-N`);
       } 
-      // 🔥 CASE B: DEDUCTING STOCK (Usage)
+      
+      // 🔥 IF DECREASING STOCK (USAGE)
       else {
-        // If the Previous batch hits 0, delete it and promote the New batch
-        if (newStock === 0 && p.sku.endsWith("-P")) {
-          const baseSKU = p.sku.replace("-P", "");
-          
-          await deleteDoc(doc(db, "products", id));
-
-          // Look for the batch waiting in line
-          const newBatch = products.find(x => x.sku === baseSKU + "-N");
-          if (newBatch) {
-            await updateDoc(doc(db, "products", newBatch.id), {
-              name: newBatch.name.replace(" (New)", ""),
-              sku: baseSKU
-            });
-            alert("✅ Previous batch finished! New batch promoted to Main.");
-          } else {
-            alert("✅ Previous batch depleted and removed.");
-          }
-        } else {
-          // Standard stock deduction
-          await updateDoc(doc(db, "products", id), {
-            stock: newStock,
-            quantity_value: newStock,
-            quantity: newStock < 1 ? Math.round(newStock * 1000) : newStock,
-            unit: newStock < 1 ? "g" : "kg"
-          });
-          alert("✅ Stock deducted.");
-        }
+        await updateDoc(doc(db, "products", id), {
+          stock: newStock,
+          quantity_value: newStock,
+          quantity: newStock < 1 ? Math.round(newStock * 1000) : newStock,
+          unit: newStock < 1 ? "g" : "kg"
+        });
+        alert("✅ Stock successfully deducted.");
       }
     }
 
-    // 📝 Record Transaction for history
+    // Record Transaction
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
+      category: p.category,
       change: adjustAmount,
       type: adjustAmount > 0 ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
 
-    loadProducts(); // Refresh the table
+    loadProducts(); 
   } catch (error) {
     console.error("Adjustment failed:", error);
-    alert("❌ Error: " + error.message);
+    alert("❌ Error processing adjustment.");
   }
 };
+	
 // Stock Color
 function stockColor(stock) {
   if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
@@ -978,45 +985,6 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
-  const mainDiv = document.getElementById("main");
-  
-  // Only build the layout shell if it doesn't exist.
-  // This keeps your search bar active while you type!
-  if (!document.getElementById("searchInput")) {
-    mainDiv.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div><h4>Inventory Dashboard</h4></div>
-        <div class="d-flex align-items-center">
-          <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
-          <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-          <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
-          <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
-        </div>
-      </div>
-
-      <div class="input-group mb-3">
-        <span class="input-group-text">🔍</span>
-        <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" onkeyup="applyFiltersAndRender()">
-      </div>
-
-      <div class="row mb-4" id="statsContainer"></div>
-
-      <table class="table table-striped align-middle border">
-        <thead class="table-dark">
-          <tr>
-            <th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th>
-            <th>Price</th><th>Total Value</th>
-            <th>Expiry Status</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="productTableBody"></tbody>
-      </table>
-    `;
-  }
-  applyFiltersAndRender();
-};
-
-window.applyFiltersAndRender = function() {
   const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
 
   const filteredList = products.filter(p => {
@@ -1026,37 +994,68 @@ window.applyFiltersAndRender = function() {
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate the 3 Stats
-  let totalProducts = filteredList.length;
-  let totalStock = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
-  // Inject the 3 specific cards back in
-  const statsContainer = document.getElementById("statsContainer");
-  if (statsContainer) {
-    statsContainer.innerHTML = `
-      <div class="col-md-4">
-        <div class="card p-3 text-center shadow-sm">
-          <h5 class="text-muted">Total Products</h5>
-          <h2>${totalProducts}</h2>
+  document.getElementById("main").innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Inventory Dashboard</h4>
+        <div class="d-flex gap-2">
+            <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'}" onclick="selectCategory('all')">All</button>
+            <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'}" onclick="selectCategory('ingredient')">Ingredients</button>
+            <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'}" onclick="selectCategory('utensil')">Utensils</button>
+            <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card p-3 text-center shadow-sm">
-          <h5 class="text-muted">Total Items (Stock)</h5>
-          <h2>${totalStock.toFixed(2)}</h2>
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text">🔍</span>
+        <input type="text" id="searchInput" class="form-control" onkeyup="applyFiltersAndRender()" placeholder="Search (name, sku...)">
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm">
+            <h5>Total Products</h5>
+            <h2>${filteredList.length}</h2>
+          </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card p-3 text-center shadow-sm bg-light">
-          <h5 class="text-muted">Total Value</h5>
-          <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm">
+            <h5>Total Stock</h5>
+            <h2>${totalItems.toFixed(2)}</h2>
+          </div>
         </div>
-      </div>
-    `;
-  }
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm bg-light">
+            <h5>Inventory Value</h5>
+            <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+          </div>
+        </div>
+    </div>
+
+    <table class="table table-striped align-middle border">
+        <thead class="table-dark">
+            <tr>
+                <th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>Expiry</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+    </table>
+  `;
 
   renderTable(filteredList);
+  
+  // Re-focus the search bar if the user was typing
+  if (search) {
+    const input = document.getElementById("searchInput");
+    input.focus();
+    input.setSelectionRange(search.length, search.length);
+  }
+};
+
+	window.applyFiltersAndRender = function() {
+    showDashboard();
 };
 	
 	//Real time Analytics
