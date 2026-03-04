@@ -795,49 +795,43 @@ function renderTable(list) {
   if (!tbody) return;
 
   const now = new Date();
-  now.setHours(0, 0, 0, 0); // Normalize time for accurate daily comparison
+  now.setHours(0, 0, 0, 0);
 
   tbody.innerHTML = list.map(p => {
     // 1. Calculations & Type Safety
     const price = (typeof p.price === 'number') ? p.price : 0;
     const stock = (typeof p.stock === 'number') ? p.stock : 0;
-    const isUtensils = (p.category === "utensil");
+    const isUtensils = (p.category.toLowerCase() === "utensil");
     
-    // Utensils: 1 stock = 100 pieces. Total Value = Price * Stock.
-    const pieces = isUtensils ? (stock * 100) : 0;
+    // Utensils: 1 stock = 100 pieces. 
+    // Total Value = Price (per piece) * Total Pieces
+    const pieces = isUtensils ? Math.round(stock * 100) : 0;
     const totalValue = isUtensils ? (price * pieces) : (price * stock);
 
-    // Dynamic Display for KG/Unit Column
-    // Per your request: "In utensils i want you to remove the kg part"
     const quantityDisplay = isUtensils ? "—" : (p.quantity ? `${p.quantity} ${p.unit}` : "—");
 
     // 2. Expiry & Countdown Logic
-let expiryHTML = '—';
-    if (p.category === 'ingredient' && p.expiry && p.expiry !== "N/A") {
-      // 1. Get "Now" but set time to midnight to compare only dates
+    let expiryHTML = '—';
+    if (!isUtensils && p.expiry && p.expiry !== "N/A") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
-      // 2. Parse the expiry date and set its time to midnight
       const expDate = new Date(p.expiry);
       expDate.setHours(0, 0, 0, 0);
 
-      // 3. Calculate the difference in milliseconds, then convert to days
       const diffTime = expDate.getTime() - today.getTime();
       const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
       let badgeClass = "bg-info text-dark"; 
       let countdownText = `${diffDays} days left`;
 
-      // 4. Threshold Logic
       if (diffDays < 0) {
-        badgeClass = "bg-danger"; // 🔥 RED
+        badgeClass = "bg-danger";
         countdownText = "EXPIRED";
       } else if (diffDays === 0) {
-        badgeClass = "bg-danger"; // 🔥 RED (Expires today)
+        badgeClass = "bg-danger";
         countdownText = "EXPIRES TODAY";
       } else if (diffDays <= 7) {
-        badgeClass = "bg-warning text-dark"; // ⚠️ YELLOW
+        badgeClass = "bg-warning text-dark";
         countdownText = "Expiring Soon!";
       }
 
@@ -848,13 +842,46 @@ let expiryHTML = '—';
         </div>
       `;
     }
-    // 3. Return Table Row
+
+    // 3. Dynamic Adjust Menu Based on Category
+    let adjustMenuHTML = "";
+    if (isUtensils) {
+      // Utensil: Custom Pieces Adjust Only
+      adjustMenuHTML = `
+        <li class="fw-bold px-2 small">Adjust Pieces</li>
+        <li class="px-2">
+          <input type="number" id="adj-${p.id}" class="form-control form-control-sm mb-2" placeholder="+ or - pieces">
+          <button class="btn btn-sm btn-primary w-100" 
+            onclick="applyAdjust('${p.id}', document.getElementById('adj-${p.id}').value, false)">
+            Update Pieces
+          </button>
+        </li>
+      `;
+    } else {
+      // Ingredient: Quick KG Adjust + Custom Grams
+      adjustMenuHTML = `
+        <li class="fw-bold px-2 small">Quick Adjust (KG)</li>
+        <li class="d-flex justify-content-between px-2 my-1 gap-1">
+          <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
+        </li>
+        <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
+        <li class="px-2">
+          <input type="number" id="adj-${p.id}" class="form-control form-control-sm mb-2" placeholder="e.g. 500">
+          <button class="btn btn-sm btn-primary w-100" 
+            onclick="applyAdjust('${p.id}', document.getElementById('adj-${p.id}').value, true)">
+            Apply
+          </button>
+        </li>
+      `;
+    }
+
     return `
       <tr>
         <td>${p.sku ?? ''}</td>
         <td>${p.name ?? ''}</td>
-        <td class="${stockColor(stock)} text-center fw-bold">${stock}</td>
-        <td>${isUtensils ? `${pieces.toLocaleString()} pcs` : `—`}</td>
+        <td class="${stockColor(stock)} text-center fw-bold">${stock.toFixed(2)}</td>
+        <td>${isUtensils ? `<strong>${pieces.toLocaleString()}</strong> pcs` : `—`}</td>
         <td>₱${price.toFixed(2)}</td>
         <td>${quantityDisplay}</td>
         <td>₱${Number(totalValue).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -866,23 +893,7 @@ let expiryHTML = '—';
                 Adjust
               </button>
               <ul class="dropdown-menu p-2" style="min-width: 180px;">
-                <li class="fw-bold px-2 small">Quick Adjust (KG/Units)</li>
-                <li class="d-flex justify-content-between px-2 my-1 gap-1">
-                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-3</button>
-                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-2</button>
-                  <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
-                  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
-                  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
-                  <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+3</button>
-                </li>
-                <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
-                <li class="px-2">
-                  <input type="number" id="custom-${p.id}" class="form-control form-control-sm mb-2" placeholder="e.g. 300 or -300">
-                  <button class="btn btn-sm btn-primary w-100" 
-                    onclick="applyAdjust('${p.id}', document.getElementById('custom-${p.id}').value, true)">
-                    Apply
-                  </button>
-                </li>
+                ${adjustMenuHTML}
               </ul>
             </div>
             <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
@@ -893,6 +904,14 @@ let expiryHTML = '—';
     `;
   }).join("");
 }
+	
+	//helper functi
+	window.promptAdjust = function(id) {
+  const val = prompt("Enter amount to adjust (use negative to decrease):");
+  if (val !== null) {
+    applyAdjust(id, val, true); // true indicates custom/grams for ingredients
+  }
+};
 	
 // Sorting
 window.sortProducts = function () {
