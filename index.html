@@ -984,80 +984,70 @@ window.filterProducts = function () {
 
 // Dashboard
 window.showDashboard = function () {
-  // 1. Build the Dashboard Shell (only if it doesn't exist or we need a full refresh)
   const mainDiv = document.getElementById("main");
   
-  mainDiv.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div><h4>Inventory Dashboard</h4></div>
-      <div class="d-flex align-items-center">
-        <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
-        <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-        <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
-        <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-        <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
-        <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
+  // Only build the layout if it's not already there
+  // This prevents the search box from resetting while you type
+  if (!document.getElementById("searchInput")) {
+    mainDiv.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div><h4>Inventory Dashboard</h4></div>
+        <div class="d-flex align-items-center">
+          <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+          <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+          <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
+          <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
+          <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+        </div>
       </div>
-    </div>
 
-    <div class="input-group mb-3">
-      <span class="input-group-text">🔍</span>
-      <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" onkeyup="applyFiltersAndRender()">
-    </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">🔍</span>
+        <input type="text" id="searchInput" class="form-control" placeholder="Search (name, sku...)" onkeyup="applyFiltersAndRender()">
+      </div>
 
-    <div class="row mb-4" id="statsContainer">
-       </div>
+      <div class="row mb-4" id="statsContainer"></div>
 
-    <table class="table table-striped align-middle border" id="productTable">
-      <thead class="table-dark">
-        <tr>
-          <th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th>
-          <th>Price</th><th>KG / Info</th><th>Total Value</th>
-          <th>Expiry Status</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="productTableBody">
-         </tbody>
-    </table>
-  `;
+      <table class="table table-striped align-middle border">
+        <thead class="table-dark">
+          <tr>
+            <th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th>
+            <th>Price</th><th>KG / Info</th><th>Total Value</th>
+            <th>Expiry Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+      </table>
+    `;
+  }
 
-  // 2. Immediately run the filter to fill the empty shell
+  // Always refresh the data
   applyFiltersAndRender();
 };
 
 	window.applyFiltersAndRender = function() {
-  const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
-  const startDate = document.getElementById("filterStart")?.value || "";
-  const endDate = document.getElementById("filterEnd")?.value || "";
+  const searchInput = document.getElementById("searchInput");
+  const search = (searchInput?.value || "").toLowerCase();
 
-  // 1. Filter Logic
+  // 1. Filter Logic (Category + Search)
   const filteredList = products.filter(p => {
     const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
     const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
                           (p.sku || "").toLowerCase().includes(search);
-    
-    let matchesDate = true;
-    if (startDate && endDate) {
-      if (p.expiry && p.expiry !== "N/A") {
-        matchesDate = (p.expiry >= startDate && p.expiry <= endDate);
-      } else {
-        matchesDate = false; 
-      }
-    }
-    return matchesCategory && matchesSearch && matchesDate;
+    return matchesCategory && matchesSearch;
   });
 
   // 2. Calculate Stats
   let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
-  // 3. Update Stats Cards ONLY
+  // 3. Update Stats Cards (Only the numbers change)
   const statsContainer = document.getElementById("statsContainer");
   if (statsContainer) {
     statsContainer.innerHTML = `
       <div class="col-md-4">
         <div class="card p-3 text-center shadow-sm">
-          <h5 class="text-muted">Filtered Products</h5>
+          <h5 class="text-muted">Products</h5>
           <h2>${filteredList.length}</h2>
         </div>
       </div>
@@ -1076,7 +1066,7 @@ window.showDashboard = function () {
     `;
   }
 
-  // 4. Update Table Rows ONLY
+  // 4. Update Table Rows
   renderTable(filteredList);
 };
 	
