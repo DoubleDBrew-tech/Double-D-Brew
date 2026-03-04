@@ -680,12 +680,6 @@ window.deleteProduct = async function (id) {
 };
 
 // Adjust
-To fix the problems you listed, we need to modify applyAdjust to handle Total Revenue/Purchases calculation, Auto-Deletion, and Automatic Batch Promotion (renaming the New batch when the Previous batch hits zero).
-
-I have also included the fixed Real-Time Analytics logic so your values actually change when you adjust stock.
-
-The Fixed applyAdjust Function
-JavaScript
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
