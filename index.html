@@ -440,13 +440,6 @@ if (isNaN(price) || price < 0) {
     d.setDate(d.getDate() + days);
     expiryDate = d.toISOString().split('T')[0]; // Format: YYYY-MM-DD
   }
-	const newP = {
-    // ... (existing fields)
-    expiry: expiryDate, // Automatically added
-    createdAt: serverTimestamp()
-  };
-
-  await addDoc(collection(db, "products"), newP);
 
 // convert to kg
 let quantity_value = unit === "g"
@@ -478,6 +471,8 @@ if (unit === "kg" && quantityInput < 1) {
   quantity_value: quantity_value, // ALWAYS in kg
   stock: quantity_value, // stock = kg
   price: price
+  expiry: expiryDate, // Automatically added
+  createdAt: serverTimestamp()
 };
 
   await addDoc(collection(db, "products"), newP);
@@ -526,6 +521,7 @@ async function updateProduct(e) {
   e.preventDefault();
   const form = e.target;
 
+  let expiryDate = null;
   let quantityInput = parseFloat(form.quantity.value);
   let unit = form.unit.value;
   let price = parseFloat(form.price.value);
@@ -538,6 +534,13 @@ async function updateProduct(e) {
   if (isNaN(price) || price < 0) {
     alert("❌ Invalid price!");
     return;
+  }
+		// Expiry
+	if (form.category.value === "ingredient") {
+    const days = parseInt(form.shelfLife.value) || 30;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    expiryDate = d.toISOString().split('T')[0]; // Format: YYYY-MM-DD
   }
 
   // convert to kg
@@ -572,6 +575,9 @@ async function updateProduct(e) {
     quantity_value: quantity_value,
     stock: quantity_value,
     price: price
+    expiry: expiryDate, // Automatically added
+    createdAt: serverTimestamp()
+  
   });
 
   alert("✅ Updated!");
