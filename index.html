@@ -680,80 +680,79 @@ window.deleteProduct = async function (id) {
 };
 
 // Adjust
+To fix the problems you listed, we need to modify applyAdjust to handle Total Revenue/Purchases calculation, Auto-Deletion, and Automatic Batch Promotion (renaming the New batch when the Previous batch hits zero).
+
+I have also included the fixed Real-Time Analytics logic so your values actually change when you adjust stock.
+
+The Fixed applyAdjust Function
+JavaScript
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
 
   const isUtensil = p.category.toLowerCase() === "utensil";
   let adjustAmount = parseFloat(value);
-
   if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
 
   try {
-    // --- SCENARIO 1: UTENSILS (Pieces Logic) ---
+    let newStock;
+    let adjustKg;
+
+    // --- 1. CALCULATE NEW STOCK ---
     if (isUtensil) {
       const currentPieces = Math.round((p.stock || 0) * 100);
       const newPieces = currentPieces + adjustAmount;
-
-      if (newPieces < 0) {
-        alert(`❌ Adjustment failed. You only have ${currentPieces} pieces left.`);
-        return;
-      }
-
-      const newStock = newPieces / 100;
-
-      await updateDoc(doc(db, "products", id), {
-        stock: newStock,
-        quantity_value: newStock,
-        quantity: newPieces,
-        unit: "pcs"
-      });
-
-      alert(`✅ Utensil updated: ${newPieces} pieces total.`);
-    } 
-
-    // --- SCENARIO 2: INGREDIENTS (Batching Logic) ---
-    else {
-      let adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
+      if (newPieces < 0) return alert(`❌ Insufficient pieces.`);
+      newStock = newPieces / 100;
+      adjustKg = adjustAmount / 100; 
+    } else {
+      adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
       const currentStock = parseFloat(p.stock || 0);
-      const newStock = parseFloat((currentStock + adjustKg).toFixed(3));
+      newStock = parseFloat((currentStock + adjustKg).toFixed(3));
+      if (newStock < 0) return alert("❌ Insufficient stock.");
+    }
 
-      if (newStock < 0) {
-        alert(`❌ Adjustment failed. Insufficient stock.`);
-        return;
-      }
+    // --- 2. HANDLE REVENUE/PURCHASE VALUE (For Real-Time Analytics) ---
+    // We must save 'totalValue' in the transaction so the Analytics page can see it
+    const transactionValue = Math.abs(adjustKg * (p.price || 0));
 
-      // 🔥 CREATE NEW BATCH IF ADDING STOCK
-      if (adjustKg > 0) {
-        // User inputs expiration date manually (YYYY-MM-DD)
-        const today = new Date().toISOString().split('T')[0];
-        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiration Date (YYYY-MM-DD):`, today);
+    // --- 3. AUTO-DELETE & BATCH PROMOTION ---
+    if (newStock <= 0) {
+      // DELETE the empty product
+      await deleteDoc(doc(db, "products", id));
+      
+      // If this was a "Previous" batch, find the "New" one and promote it
+      if (p.sku.endsWith("-P")) {
+        const baseSKU = p.sku.replace("-P", "");
+        const newBatch = products.find(x => x.sku === baseSKU + "-N");
         
-        if (!newExpiryDate) return; // Cancel if user closes prompt
-
-        // Validation: Check if it's a valid date and not in the past
-        const selectedDate = new Date(newExpiryDate);
-        const todayDate = new Date();
-        todayDate.setHours(0,0,0,0);
-
-        if (isNaN(selectedDate.getTime())) {
-            return alert("❌ Invalid Date format. Please use YYYY-MM-DD.");
+        if (newBatch) {
+          await updateDoc(doc(db, "products", newBatch.id), {
+            name: newBatch.name.replace(" (New)", ""), // Remove (New)
+            sku: baseSKU // Remove -N
+          });
+          alert(`✅ ${p.name} finished. ${newBatch.name} is now the primary batch.`);
+        } else {
+          alert(`✅ ${p.name} deleted (Stock reached 0).`);
         }
-        if (selectedDate < todayDate) {
-            return alert("❌ Error: Expiration date cannot be in the past.");
-        }
+      }
+    } 
+    // --- 4. CREATE NEW BATCH IF ADDING STOCK ---
+    else if (adjustKg > 0 && !isUtensil) {
+        const today = new Date().toISOString().split('T')[0];
+        const newExpiryDate = prompt(`New batch for ${p.name}.\nEnter Expiry (YYYY-MM-DD):`, today);
+        if (!newExpiryDate) return;
 
-        // Clean base name and SKU to prevent stacking tags (e.g., SKU-N-P)
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
         const baseSKU = p.sku.replace("-N", "").replace("-P", "");
 
-        // 1. Update CURRENT product to "Previous" and SKU to "-P"
+        // Update Current to Previous
         await updateDoc(doc(db, "products", id), { 
-            name: cleanName + " (Previous)",
-            sku: baseSKU + "-P"
+            name: cleanName + " (Previous)", 
+            sku: baseSKU + "-P" 
         });
 
-        // 2. Create the NEW product entry with "(New)" and SKU "-N"
+        // Add the New batch
         await addDoc(collection(db, "products"), {
           sku: baseSKU + "-N",
           name: cleanName + " (New)",
@@ -764,39 +763,34 @@ window.applyAdjust = async function (id, value, isCustom = false) {
           quantity_value: adjustKg,
           quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
           unit: adjustKg < 1 ? "g" : "kg",
-          expiry: newExpiryDate, // Manually entered date
+          expiry: newExpiryDate,
           created_at: serverTimestamp()
         });
-
-        alert(`✅ New batch created: SKU ${baseSKU}-N`);
-      } 
-      
-      // 🔥 IF DECREASING STOCK (USAGE)
-      else {
-        await updateDoc(doc(db, "products", id), {
-          stock: newStock,
-          quantity_value: newStock,
-          quantity: newStock < 1 ? Math.round(newStock * 1000) : newStock,
-          unit: newStock < 1 ? "g" : "kg"
-        });
-        alert("✅ Stock successfully deducted.");
-      }
+    }
+    // --- 5. STANDARD UPDATE ---
+    else {
+      await updateDoc(doc(db, "products", id), {
+        stock: newStock,
+        quantity_value: newStock,
+        quantity: isUtensil ? (newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
+        unit: isUtensil ? "pcs" : (newStock < 1 ? "g" : "kg")
+      });
     }
 
-    // Record Transaction
+    // --- 6. RECORD TRANSACTION (Fixed for Analytics) ---
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
       category: p.category,
-      change: adjustAmount,
-      type: adjustAmount > 0 ? "Restock" : "Usage",
+      change: adjustKg,
+      totalValue: transactionValue, // THIS FIXES YOUR ANALYTICS
+      type: adjustKg > 0 ? "Restock" : "Usage",
       timestamp: serverTimestamp()
     });
 
     loadProducts(); 
   } catch (error) {
     console.error("Adjustment failed:", error);
-    alert("❌ Error processing adjustment.");
   }
 };
 	
@@ -1000,7 +994,7 @@ window.showDashboard = function () {
   let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
-  // 4. Build the UI - Re-adding your 📊 Analytics button and 3 Cards
+  // 4. Build the UI
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inventory Dashboard</h4>
@@ -1034,31 +1028,42 @@ window.showDashboard = function () {
           </div>
         </div>
         <div class="col-md-4">
-          <div class="card p-3 text-center shadow-sm bg-light">
-            <h5 class="text-muted small">Inventory Value</h5>
-            <h2 class="text-success">₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+          <div class="card p-3 text-center shadow-sm">
+            <h5 class="text-muted small">Total Inventory Value</h5>
+            <h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
           </div>
         </div>
     </div>
 
-    <table class="table table-striped align-middle border">
-        <thead class="table-dark">
-            <tr>
-                <th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th>
-                <th>Price</th><th>Total Value</th><th>Expiry Status</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="productTableBody"></tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle border">
+          <thead class="table-dark">
+              <tr>
+                  <th>SKU</th>
+                  <th>Name</th>
+                  <th>Stock</th>
+                  <th>Pieces</th>
+                  <th>Price</th>
+                  <th>KG / Info</th>
+                  <th>Total Value</th>
+                  <th>Expiry Status</th>
+                  <th>Actions</th>
+              </tr>
+          </thead>
+          <tbody id="productTableBody"></tbody>
+      </table>
+    </div>
   `;
 
   renderTable(filteredList);
 
-  // Focus-Fix: Keeps the cursor in the search bar after the refresh
+  // Focus-Fix: Keeps cursor in search bar
   if (search) {
     const input = document.getElementById("searchInput");
-    input.focus();
-    input.setSelectionRange(search.length, search.length);
+    if (input) {
+        input.focus();
+        input.setSelectionRange(search.length, search.length);
+    }
   }
 };
 
