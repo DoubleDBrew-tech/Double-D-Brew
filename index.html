@@ -696,26 +696,29 @@ window.applyAdjust = async function (id, value, isCustom = false) {
     if (isUtensil) {
       const currentPieces = Math.round((p.stock || 0) * 100);
       const newPieces = currentPieces + adjustAmount;
-      if (newPieces < 0) return alert(`❌ Insufficient pieces.`);
+      
+      // Strict check: Prevent utensils from going below 0
+      if (newPieces < 0) return alert(`❌ Insufficient pieces. Current: ${currentPieces}`);
+      
       newStock = newPieces / 100;
       adjustKg = adjustAmount / 100; 
     } else {
       adjustKg = isCustom ? adjustAmount / 1000 : adjustAmount;
       const currentStock = parseFloat(p.stock || 0);
       newStock = parseFloat((currentStock + adjustKg).toFixed(3));
+      
+      // Strict check: Prevent ingredients from going below 0
       if (newStock < 0) return alert("❌ Insufficient stock.");
     }
 
     // --- 2. VALUE FOR ANALYTICS ---
-    // This ensures Total Revenue and Total Purchases cards change in real-time
     const transactionValue = Math.abs(adjustKg * (p.price || 0));
 
-    // --- 3. AUTO-DELETE & BATCH PROMOTION ---
-    if (newStock <= 0) {
-      // Delete the current empty product
+    // --- 3. AUTO-DELETE & BATCH PROMOTION (Ingredients Only) ---
+    // Added '!isUtensil' so utensils are never deleted at 0
+    if (newStock <= 0 && !isUtensil) {
       await deleteDoc(doc(db, "products", id));
       
-      // If the finished product was a "Previous" batch, promote the "New" one
       if (p.sku.endsWith("-P") || p.name.includes("(Previous)")) {
         const baseSKU = p.sku.replace("-P", "");
         const newBatch = products.find(x => x.sku === baseSKU + "-N");
@@ -729,7 +732,7 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         }
       }
     } 
-    // --- 4. CREATE NEW BATCH (RESTOCK) ---
+    // --- 4. CREATE NEW BATCH (Ingredients Only) ---
     else if (adjustKg > 0 && !isUtensil) {
         const today = new Date().toISOString().split('T')[0];
         const newExpiryDate = prompt(`Restocking ${p.name}.\nEnter Expiry (YYYY-MM-DD):`, today);
@@ -738,13 +741,11 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "");
         const baseSKU = p.sku.replace("-N", "").replace("-P", "");
 
-        // Turn current stock into "Previous"
         await updateDoc(doc(db, "products", id), { 
             name: cleanName + " (Previous)", 
             sku: baseSKU + "-P" 
         });
 
-        // Add the new stock as a "New" batch
         await addDoc(collection(db, "products"), {
           sku: baseSKU + "-N",
           name: cleanName + " (New)",
@@ -759,18 +760,18 @@ window.applyAdjust = async function (id, value, isCustom = false) {
           created_at: serverTimestamp()
         });
     }
-    // --- 5. STANDARD UPDATE (USAGE) ---
+    // --- 5. STANDARD UPDATE (Usage or Utensils) ---
     else {
+      // For Utensils or Standard Ingredient usage that doesn't hit 0
       await updateDoc(doc(db, "products", id), {
         stock: newStock,
         quantity_value: newStock,
-        quantity: isUtensil ? (newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
+        quantity: isUtensil ? Math.round(newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
         unit: isUtensil ? "pcs" : (newStock < 1 ? "g" : "kg")
       });
     }
 
     // --- 6. RECORD TRANSACTION ---
-    // Saving totalValue ensures the "Analytics" logic sees the money change
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
