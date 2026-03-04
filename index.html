@@ -285,7 +285,7 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where, orderBy, onSnapshot
+  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where, onSnapshot, orderBy
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // FIREBASE
@@ -385,42 +385,58 @@ window.resetDateFilter = function() {
 };
 
 async function loadProducts() {
-  // 1. Fetch from Firestore (Ordering by newest first)
-  const q = query(collection(db, "products"), orderBy("created_at", "desc"));
-  const querySnapshot = await getDocs(q);
-  
-  products = [];
-  querySnapshot.forEach((docu) => {
-    products.push({ id: docu.id, ...docu.data() });
-  });
-
-  // 2. Get Filter Values from UI
-  const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
-  const startDate = document.getElementById("filterStart")?.value || ""; // YYYY-MM-DD
-  const endDate = document.getElementById("filterEnd")?.value || "";     // YYYY-MM-DD
-
-  // 3. Apply Filtering
-  const filtered = products.filter(p => {
-    // Search match (Name or SKU)
-    const matchesSearch = p.name.toLowerCase().includes(search) || 
-                          p.sku.toLowerCase().includes(search);
+  try {
+    // 1. Fetch from Firestore (Ordering by newest first)
+    const q = query(collection(db, "products"), orderBy("created_at", "desc"));
+    const querySnapshot = await getDocs(q);
     
-    // Expiry Date match
-    let matchesExpiry = true;
-    if (startDate && endDate) {
-      if (p.expiry && p.expiry !== "N/A") {
-        // String comparison works perfectly for YYYY-MM-DD
-        matchesExpiry = (p.expiry >= startDate && p.expiry <= endDate);
-      } else {
-        matchesExpiry = false; // Hide items with no expiry when filtering by date
+    products = []; // Sync with the global products array
+    querySnapshot.forEach((docu) => {
+      products.push({ id: docu.id, ...docu.data() });
+    });
+
+    // 2. Get Filter Values from UI
+    const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+    const startDate = document.getElementById("filterStart")?.value || ""; 
+    const endDate = document.getElementById("filterEnd")?.value || "";
+
+    // 3. Apply Filtering logic
+    const filtered = products.filter(p => {
+      const name = (p.name || "").toLowerCase();
+      const sku = (p.sku || "").toLowerCase();
+      
+      const matchesSearch = name.includes(search) || sku.includes(search);
+      
+      let matchesExpiry = true;
+      if (startDate && endDate) {
+        if (p.expiry && p.expiry !== "N/A") {
+          matchesExpiry = (p.expiry >= startDate && p.expiry <= endDate);
+        } else {
+          matchesExpiry = false; 
+        }
       }
+      return matchesSearch && matchesExpiry;
+    });
+
+    // 4. Update the Dashboard UI components
+    if (typeof showDashboard === "function") {
+      // We call showDashboard to refresh the "Total Value" cards
+      // but we use applyFiltersAndRender logic inside it
+      showDashboard(); 
+    } else {
+      renderTable(filtered);
     }
 
-    return matchesSearch && matchesExpiry;
-  });
-
-  // 4. Render the filtered list
-  renderTable(filtered);
+  } catch (error) {
+    console.error("Firestore Error:", error);
+    // FALLBACK: If orderBy fails due to missing index, load anyway
+    const querySnapshot = await getDocs(collection(db, "products"));
+    products = [];
+    querySnapshot.forEach((docu) => {
+      products.push({ id: docu.id, ...docu.data() });
+    });
+    showDashboard();
+  }
 }
 
 // ADD PRO
