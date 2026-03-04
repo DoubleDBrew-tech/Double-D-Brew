@@ -371,37 +371,13 @@ function parseKgInput(input) {
 }
 
 // LOAD PRO
-// Function to clear filters and show all products
 async function loadProducts() {
-  console.log("Attempting to load products...");
-  try {
-    // 1. Try to load with sorting (this might fail if index is missing)
-    const q = query(collection(db, "products"), orderBy("created_at", "desc"));
-    const querySnapshot = await getDocs(q);
-    
-    products = [];
-    querySnapshot.forEach((docu) => {
-      products.push({ id: docu.id, ...docu.data() });
-    });
-    console.log("Loaded with sorting: ", products.length);
-
-  } catch (error) {
-    console.error("Sorting failed, falling back to basic load:", error);
-    
-    // 2. FALLBACK: Load without sorting (This ALWAYS works)
-    const querySnapshot = await getDocs(collection(db, "products"));
-    products = [];
-    querySnapshot.forEach((docu) => {
-      products.push({ id: docu.id, ...docu.data() });
-    });
-  }
-
-  // 3. Force the UI to show even if filters are weird
-  if (products.length === 0) {
-      console.warn("Database is empty or connection failed.");
-  }
-  
-  showDashboard(); 
+  const querySnapshot = await getDocs(collection(db, "products"));
+  products = [];
+  querySnapshot.forEach((docu) => {
+    products.push({ id: docu.id, ...docu.data() });
+  });
+  showDashboard();
 }
 
 // ADD PRO
