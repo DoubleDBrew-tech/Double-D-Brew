@@ -10,6 +10,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
 /* ✨ MANGO THEME UI */
+/* MAIN BACKGROUND */
 body {
   background: #fff8e1; /* light mango cream */
   font-family: "Poppins", sans-serif;
@@ -23,11 +24,14 @@ body {
   justify-content: center;
   position: relative;
   overflow: hidden;
+
+  /* Mango gradient + mango image background */
   background: linear-gradient(135deg, #ffcc4d, #fff3c4),
               url('https://images.unsplash.com/photo-1611078486246-3bb14edc8c7b?auto=format&fit=crop&w=800&q=80') no-repeat center center;
   background-size: cover;
 }
 
+/* Semi-transparent overlay to make login box pop */
 #loginForm::before {
   content: "";
   position: absolute;
@@ -36,6 +40,7 @@ body {
   z-index: 1;
 }
 
+/* Floating mango slices container */
 #loginForm .mango-slice {
   position: absolute;
   width: 60px;
@@ -46,12 +51,14 @@ body {
   opacity: 0.8;
 }
 
+/* Different start positions */
 #loginForm .mango-slice:nth-child(1) { left: 10%; animation-duration: 12s; }
 #loginForm .mango-slice:nth-child(2) { left: 30%; animation-duration: 10s; animation-delay: 2s; }
 #loginForm .mango-slice:nth-child(3) { left: 50%; animation-duration: 14s; animation-delay: 1s; }
 #loginForm .mango-slice:nth-child(4) { left: 70%; animation-duration: 11s; animation-delay: 3s; }
 #loginForm .mango-slice:nth-child(5) { left: 90%; animation-duration: 13s; animation-delay: 0s; }
 
+/* Mango float animation */
 @keyframes floatMango {
   0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
   10% { opacity: 1; }
@@ -59,13 +66,14 @@ body {
   100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
 }
 
+/* Login box stays above overlay and mango slices */
 .login-box {
   position: relative;
   z-index: 2;
   background: rgba(255, 255, 248, 0.95);
   padding: 35px;
   border-radius: 18px;
-  border: 2px solid #f7b731;
+  border: 2px solid #f7b731; /* mango yellow border */
   box-shadow: 0 6px 18px rgba(255, 179, 0, 0.25);
   text-align: center;
   min-width: 350px;
@@ -73,8 +81,9 @@ body {
 
 .login-box h2 {
   font-weight: 700;
-  color: #d68b00;
+  color: #d68b00; /* deep mango orange */
 }
+
 
 /* NAVBAR */
 .navbar {
@@ -91,7 +100,7 @@ body {
 
 /* BUTTONS */
 .btn-primary {
-  background: #ffb300 !important;
+  background: #ffb300 !important; /* mango */
   border: none;
 }
 .btn-primary:hover {
@@ -129,12 +138,20 @@ body {
   border-color: #ffb300 !important;
 }
 
-.table-striped tbody tr:nth-child(odd) { background: #fff7d1; }
-.table-striped tbody tr:nth-child(even) { background: #fff2bd; }
-.table-striped tbody tr:hover { background: #fff0a3; }
+.table-striped tbody tr:nth-child(odd) {
+  background: #fff7d1;
+}
+.table-striped tbody tr:nth-child(even) {
+  background: #fff2bd;
+}
+
+.table-striped tbody tr:hover {
+  background: #fff0a3; /* soft mango yellow on hover */
+}
+
  
-body #app {
-  background: #fff8e1;
+ body #app {
+  background: #fff8e1; /* mango cream */
   min-height: 100vh;
   position: relative;
   overflow: hidden;
@@ -150,6 +167,7 @@ body #app {
   opacity: 0.6;
 }
 
+/* Different positions for slices */
 #app .mango-slice:nth-child(1) { left: 5%; animation-delay: 0s; }
 #app .mango-slice:nth-child(2) { left: 25%; animation-delay: 3s; }
 #app .mango-slice:nth-child(3) { left: 50%; animation-delay: 1s; }
@@ -163,7 +181,7 @@ body #app {
   100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
 }
 
-/* 🍿 WATCH PARTY CINEMATIC ENGINE */
+/* 🍿 WATCH PARTY CINEMATIC STYLING ENGINE */
 #watchPartyDashboard {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
@@ -182,15 +200,11 @@ body #app {
 .wp-bg-blur {
   position: absolute; inset: 0;
   background-size: cover; background-position: center;
-  filter: brightness(0.5) contrast(1.1);
-  z-index: -1;
+  filter: brightness(0.4) contrast(1.1);
+  transform: scale(1.05);
 }
 .wp-gate-content {
   position: relative; text-align: center; z-index: 3;
-  background: rgba(11, 12, 16, 0.65);
-  padding: 40px; border-radius: 20px;
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 75, 110, 0.3);
 }
 .wp-greeting {
   font-size: 3.5rem; font-weight: 700; color: #fff;
@@ -224,9 +238,8 @@ body #app {
 }
 #wpSharedPlayer { width: 100%; display: block; aspect-ratio: 16/9; }
 .sync-badge {
-  position: absolute; top: 15px; left: 15px; background: rgba(40, 167, 69, 0.85);
+  position: absolute; top: 15px; left: 15px; background: rgba(255, 75, 110, 0.8);
   padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;
-  border: 1px solid #fff;
 }
 .wp-movie-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -253,7 +266,12 @@ body #app {
 
 <!-- LOGIN -->
 <div id="loginForm">
-  <div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  
   <div class="login-box">
     <h2>Double'd Brew Login</h2>
     <input type="text" id="username" class="form-control mb-2" placeholder="Username" required>
@@ -263,20 +281,41 @@ body #app {
 </div>
 
 <!-- WELCOME PAGE -->
-<div id="welcomePage" style="display: none; height: 100vh; background: #fff8e1; text-align: center; padding-top: 20vh; font-family: Poppins;">
-  <h1 style="color:#d68b00; font-size: 50px; font-weight: 800;">Welcome to Double'd Brew! 🥭</h1>
-  <p style="font-size: 20px; margin-top: 10px;">Preparing your inventory dashboard...</p>
-  <button class="btn btn-primary mt-4" onclick="goToDashboard()">Continue</button>
+<div id="welcomePage" style="
+  display: none;
+  height: 100vh;
+  background: #fff8e1;
+  text-align: center;
+  padding-top: 20vh;
+  font-family: Poppins;
+">
+  <h1 style="color:#d68b00; font-size: 50px; font-weight: 800;">
+    Welcome to Double'd Brew! 🥭
+  </h1>
+  <p style="font-size: 20px; margin-top: 10px;">
+    Preparing your inventory dashboard...
+  </p>
+
+  <button class="btn btn-primary mt-4" onclick="goToDashboard()">
+    Continue
+  </button>
 </div>
 
 <!-- APP -->
 <div id="app">
-  <div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div><div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
+  <div class="mango-slice"></div>
   
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Double'd Brew Inventory</a>
-      <div class="d-flex ms-auto align-items-center">
+
+      <div class="d-flex ms-auto">
+
+        <!-- SORTING DROPDOWN -->
         <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:170px;">
           <option value="">Sort</option>
           <option value="az">A → Z</option>
@@ -284,42 +323,43 @@ body #app {
           <option value="stockLowHigh">Stock Low → High</option>
           <option value="stockHighLow">Stock High → Low</option>
         </select>
+
         <button class="btn btn-outline-light me-2" onclick="exportXLSX()">Export XLSX</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
-        <div class="dropdown ms-2">
-          <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">⋮</button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsMenuBtn">
-            <li><button class="dropdown-item" id="toggleAnimationBtn" onclick="toggleAnimation()">🥭 Turn Off Mango Animation</button></li>
-          </ul>
-        </div>
+		<div class="dropdown ms-2">
+  <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
+    ⋮
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsMenuBtn">
+    <li>
+      <button class="dropdown-item" id="toggleAnimationBtn" onclick="toggleAnimation()">
+        🥭 Turn Off Mango Animation
+      </button>
+    </li>
+  </ul>
+</div>
+
+
       </div>
     </div>
   </nav>
+
   <div class="container py-4" id="main"></div>
 </div>
 
 <!-- 🍿 WATCH PARTY LAYER COMPONENTS -->
 <div id="watchPartyDashboard" class="wp-hidden">
-  <!-- STAGE 1: Welcome Greeting Gate -->
   <div id="wpWelcomeGate" class="wp-overlay">
-    <!-- Picture injected as standard background source layout -->
-    <div class="wp-bg-blur" style="background-image: url('image_3.png');"></div>
+    <div class="wp-bg-blur" style="background-image: url('assets/img/couple-photo.jpg');"></div>
     <div class="wp-gate-content">
       <h1 class="wp-greeting">I Love You Leigh</h1>
       <button id="btnEnterTheater" class="wp-btn-enter">✨ Enter Movie Night</button>
     </div>
   </div>
 
-  <!-- STAGE 2: Shared Streaming Theater -->
   <div id="wpTheaterPanel" class="wp-content-panel wp-hidden-stage">
     <div class="wp-header">
-      <div class="d-flex align-items-center gap-3">
-        <h2>🎬 Double-D-Brew Cinema Room</h2>
-        <!-- 📁 GOOGLE DRIVE ROUTED DIRECTLY HERE -->
-        <a href="https://drive.google.com" target="_blank" class="btn btn-sm btn-outline-warning fw-bold text-decoration-none">
-          📁 Google Drive Storage
-        </a>
-      </div>
+      <h2>🎬 Double-D-Brew Cinema Room</h2>
       <button id="btnCloseParty" class="wp-btn-close">Back to Inventory</button>
     </div>
 
@@ -328,7 +368,7 @@ body #app {
         <source src="" type="video/mp4">
         Your browser does not support the video tag.
       </video>
-      <div id="syncIndicator" class="sync-badge">🟢 Sync Enabled & Connected</div>
+      <div id="syncIndicator" class="sync-badge">🔴 Live Syncing Active</div>
     </div>
 
     <h3>🍿 Our Uploaded Movie Vault</h3>
@@ -339,9 +379,10 @@ body #app {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, query, where, onSnapshot, orderBy
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
+// FIREBASE CONFIGURATION
 const firebaseConfig = {
   apiKey: "AIzaSyA1smwaGZUVzAO1JXjcV7hkSNdf0eRVB0w",
   authDomain: "doubledbrew-569cd.firebaseapp.com",
@@ -353,25 +394,35 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
 let products = [];
 let currentCategory = "all"; 
 let sortMode = ""; 
 let searchQuery = ""; 
+let mainDashboardUnsubscribe = null;
 
 window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
+
   if (email === "admin" && password === "mango") {
     localStorage.setItem("loggedIn", "true");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("welcomePage").style.display = "block";
-    setTimeout(() => { goToDashboard(); }, 10000);
+
+    setTimeout(() => {
+      goToDashboard();
+    }, 10000);
   } else {
     alert("❌ Invalid username or password!");
   }
 };
 
 window.logout = function () {
+  if (mainDashboardUnsubscribe) {
+    mainDashboardUnsubscribe();
+    mainDashboardUnsubscribe = null;
+  }
   localStorage.removeItem("loggedIn");
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
@@ -380,162 +431,1155 @@ window.logout = function () {
 window.goToDashboard = function () {
   document.getElementById("welcomePage").style.display = "none";
   document.getElementById("app").style.display = "block";
-  loadProducts();
+  setupRealtimeProducts();
 };
 
-async function loadProducts() {
-  const querySnapshot = await getDocs(collection(db, "products"));
-  products = [];
-  querySnapshot.forEach((docu) => { products.push({ id: docu.id, ...docu.data() }); });
-  showDashboard();
+// REAL-TIME PRODUCTS SYNC ENGINE
+function setupRealtimeProducts() {
+  if (mainDashboardUnsubscribe) return;
+
+  const q = collection(db, "products");
+  mainDashboardUnsubscribe = onSnapshot(q, (snapshot) => {
+    products = [];
+    snapshot.forEach((docu) => {
+      products.push({ id: docu.id, ...docu.data() });
+    });
+    
+    const isMainDashboardActive = document.getElementById("productTableBody") !== null;
+    if (isMainDashboardActive) {
+      showDashboard();
+    }
+  }, (error) => {
+    console.error("Real-time sync connection interrupted:", error);
+  });
 }
 
+// KG PARSING UTIL
+function parseKgInput(input) {
+  if (!input || input.toString().trim() === "") return { kg_value: null, kg_display: "" };
+  let s = input.toString().trim().toLowerCase();
+  s = s.replace(/\s+/g, '');
+  let kg_value = null;
+  if (s.endsWith('g') && !s.endsWith('kg')) {
+    let num = parseFloat(s.replace(/g$/, ''));
+    if (!isNaN(num)) kg_value = num / 1000;
+  } else if (s.endsWith('kg')) {
+    let num = parseFloat(s.replace(/kg$/, ''));
+    if (!isNaN(num)) kg_value = num;
+  } else {
+    const num = parseFloat(s);
+    if (!isNaN(num)) {
+      if (num >= 100) {
+        kg_value = num / 1000;
+        s = s + 'g';
+      } else {
+        kg_value = num;
+      }
+    }
+  }
+  let kg_display = "";
+  if (kg_value === null) {
+    kg_display = input.toString();
+  } else {
+    if (kg_value < 1) {
+      const grams = Math.round(kg_value * 1000);
+      kg_display = `${grams} g`;
+    } else {
+      kg_display = `${+kg_value.toFixed(3)} kg`;
+    }
+  }
+  return { kg_value, kg_display };
+}
+
+// ADD PRO
 window.addProduct = function () {
   const today = new Date().toISOString().split('T')[0];
+
   document.getElementById("main").innerHTML = `
     <h3>Add New Product</h3>
     <form id="addForm">
       <label class="small fw-bold">SKU (Base):</label>
       <input class="form-control mb-2" name="sku" placeholder="e.g. COFFEE-01" required>
+      
       <label class="small fw-bold">Name:</label>
       <input class="form-control mb-2" name="name" placeholder="Name" required>
+      
       <label class="small fw-bold">Description:</label>
       <input class="form-control mb-2" name="description" placeholder="Description">
+
       <label class="small fw-bold">Category:</label>
       <select class="form-control mb-2" name="category" id="addCategory" onchange="toggleAddFields()" required>
         <option value="ingredient">Ingredient</option>
         <option value="utensil">Utensil</option>
       </select>
+
       <div id="ingredientFields">
         <div class="p-2 border rounded mb-2 bg-light">
           <label class="small fw-bold text-primary">Expiration Date:</label>
           <input type="date" class="form-control form-control-sm" name="expiryDate" min="${today}" required>
         </div>
+        
         <label class="small fw-bold">Starting Quantity:</label>
         <div class="input-group mb-2">
           <input class="form-control" name="quantity" type="number" step="0.01" min="0" placeholder="e.g. 1.5">
-          <select class="form-select" name="unit"><option value="kg">kg</option><option value="g">grams</option></select>
+          <select class="form-select" name="unit">
+            <option value="kg">kg</option>
+            <option value="g">grams</option>
+          </select>
         </div>
       </div>
+
       <div id="utensilFields" style="display:none;">
         <div class="p-2 border rounded mb-2 bg-light text-center">
           <label class="small fw-bold d-block">Utensil Stocking</label>
           <input class="form-control" name="pieces" type="number" min="0" placeholder="Number of Pieces">
+          <small class="text-muted d-block mt-1">Note: 100 pieces = 1.00 stock</small>
         </div>
       </div>
+
       <label class="small fw-bold" id="priceLabelText">Price (Per KG):</label>
       <input class="form-control mb-2" name="price" id="priceInput" placeholder="0.00" type="number" step="0.01" min="0" required>
+      
       <div class="mt-3">
         <button class="btn btn-primary">Save Product</button>
         <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
       </div>
     </form>
   `;
+
   window.toggleAddFields = function() {
     const cat = document.getElementById("addCategory").value;
-    const isIng = (cat === "ingredient");
-    document.getElementById("ingredientFields").style.display = isIng ? "block" : "none";
-    document.getElementById("utensilFields").style.display = isIng ? "none" : "block";
-    document.getElementById("priceLabelText").innerText = isIng ? "Price (Per KG):" : "Price (Per Piece):";
+    const isIngredient = (cat === "ingredient");
+    
+    document.getElementById("ingredientFields").style.display = isIngredient ? "block" : "none";
+    document.getElementById("utensilFields").style.display = isIngredient ? "none" : "block";
+    document.getElementById("priceLabelText").innerText = isIngredient ? "Price (Per KG):" : "Price (Per Piece):";
+    
+    document.getElementsByName("expiryDate")[0].required = isIngredient;
   };
+
   document.getElementById("addForm").addEventListener("submit", saveNewProduct);
 };
-
+	
 async function saveNewProduct(e) {
   e.preventDefault();
   const form = e.target;
+  const category = form.category.value;
+  const price = parseFloat(form.price.value);
   const newSku = form.sku.value.trim();
-  if (products.some(p => p.sku.toLowerCase() === newSku.toLowerCase())) return alert("❌ SKU already exists.");
-  
-  let finalStock = 0, finalQty = parseFloat(form.quantity.value) || 0, finalUnit = form.unit.value;
-  if (form.category.value === "utensil") {
-    finalStock = (parseFloat(form.pieces.value) || 0) / 100;
-    finalQty = parseFloat(form.pieces.value) || 0;
-    finalUnit = "pcs";
-  } else {
-    finalStock = finalUnit === "g" ? finalQty / 1000 : finalQty;
+
+  if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
+    alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for the batching system.");
+    return;
   }
 
-  await addDoc(collection(db, "products"), {
-    sku: newSku, name: form.name.value, description: form.description.value,
-    category: form.category.value, quantity: finalQty, unit: finalUnit,
-    stock: finalStock, price: parseFloat(form.price.value), expiry: form.expiryDate?.value || "N/A"
-  });
-  showDashboard(); loadProducts();
+  const skuExists = products.some(p => p.sku.toLowerCase() === newSku.toLowerCase());
+  if (skuExists) {
+    alert(`❌ SKU Error: The SKU "${newSku}" is already assigned to another product.`);
+    return;
+  }
+
+  let finalStock = 0;
+  let finalQuantity = 0;
+  let finalUnit = "";
+  let expiryDate = "N/A";
+
+  if (category === "utensil") {
+    const piecesInput = parseFloat(form.pieces.value) || 0;
+    finalStock = piecesInput / 100; 
+    finalQuantity = piecesInput; 
+    finalUnit = "pcs";
+    expiryDate = "N/A";
+  } else {
+    const qtyInput = parseFloat(form.quantity.value) || 0;
+    const unitInput = form.unit.value;
+    finalStock = unitInput === "g" ? qtyInput / 1000 : qtyInput;
+    finalQuantity = qtyInput;
+    finalUnit = unitInput;
+    expiryDate = form.expiryDate.value || "N/A";
+  }
+
+  try {
+    await addDoc(collection(db, "products"), {
+      sku: newSku,
+      name: form.name.value,
+      description: form.description.value,
+      category: category,
+      quantity: finalQuantity,
+      unit: finalUnit,
+      quantity_value: finalStock, 
+      stock: finalStock,
+      price: price,
+      expiry: expiryDate,
+      created_at: serverTimestamp()
+    });
+
+    alert("✅ New product added!");
+    showDashboard();
+  } catch (error) {
+    console.error("Error adding product:", error);
+    alert("❌ Failed to save product to database.");
+  }
 }
 
+// EDIT PRO
+window.editProduct = function (id) {
+  const p = products.find(x => x.id === id) || {};
+  const isUtensil = p.category === "utensil";
+  const baseSku = (p.sku || "").replace("-N", "").replace("-P", "");
+  const today = new Date().toISOString().split('T')[0];
+
+  document.getElementById("main").innerHTML = `
+    <h3>Edit Product</h3>
+    <form id="editForm">
+      <input type="hidden" name="id" value="${p.id}">
+      
+      <label class="small fw-bold">SKU (Base):</label>
+      <input class="form-control mb-2" name="sku" value="${baseSku}" placeholder="SKU" required>
+      
+      <label class="small fw-bold">Name:</label>
+      <input class="form-control mb-2" name="name" value="${p.name ?? ''}" placeholder="Name" required>
+      
+      <label class="small fw-bold">Description:</label>
+      <input class="form-control mb-2" name="description" value="${p.description ?? ''}" placeholder="Description">
+
+      <label class="small fw-bold">Category:</label>
+      <select class="form-control mb-2" name="category" id="editCategory" onchange="toggleEditFields()" required>
+        <option value="ingredient" ${p.category === "ingredient" ? "selected" : ""}>Ingredient</option>
+        <option value="utensil" ${p.category === "utensil" ? "selected" : ""}>Utensil</option>
+      </select>
+
+      <div id="editIngredientFields" style="display: ${isUtensil ? 'none' : 'block'};">
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold text-primary">Expiration Date:</label>
+          <input type="date" class="form-control form-control-sm" name="customExpiry" 
+            min="${today}" 
+            value="${p.expiry && p.expiry !== 'N/A' ? p.expiry : ''}">
+          <small class="text-muted" style="font-size: 0.75rem;">Current: ${p.expiry || 'N/A'}</small>
+        </div>
+
+        <label class="small fw-bold">Quantity:</label>
+        <div class="input-group mb-2">
+          <input class="form-control" name="quantity" type="number" step="0.01" min="0" value="${!isUtensil ? (p.quantity ?? '') : ''}" placeholder="Quantity">
+          <select class="form-select" name="unit">
+            <option value="kg" ${p.unit === "kg" ? "selected" : ""}>kg</option>
+            <option value="g" ${p.unit === "g" ? "selected" : ""}>grams</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="editUtensilFields" style="display: ${isUtensil ? 'block' : 'none'};">
+        <div class="p-2 border rounded mb-2 bg-light">
+          <label class="small fw-bold">Pieces (100 pieces = 1.00 stock):</label>
+          <input class="form-control" name="pieces" type="number" min="0" value="${isUtensil ? Math.round(p.stock * 100) : ''}" placeholder="Enter Pieces">
+        </div>
+      </div>
+
+      <label class="small fw-bold" id="priceLabelText">Price (${isUtensil ? 'Per Piece' : 'Per KG'}):</label>
+      <input class="form-control mb-2" name="price" value="${p.price ?? 0}" type="number" step="0.01" min="0" required>
+      
+      <div class="mt-3">
+        <button class="btn btn-primary">Update Product</button>
+        <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+      </div>
+    </form>
+  `;
+
+  window.toggleEditFields = function() {
+    const cat = document.getElementById("editCategory").value;
+    const isIng = (cat === "ingredient");
+    document.getElementById("editIngredientFields").style.display = isIng ? "block" : "none";
+    document.getElementById("editUtensilFields").style.display = isIng ? "none" : "block";
+    document.getElementById("priceLabelText").innerText = isIng ? "Price (Per KG):" : "Price (Per Piece):";
+  };
+
+  document.getElementById("editForm").addEventListener("submit", updateProduct);
+};
+
+async function updateProduct(e) {
+  e.preventDefault();
+  const form = e.target;
+  const productId = form.elements['id'].value; 
+  const newSku = form.sku.value.trim();
+  
+  const originalProduct = products.find(x => x.id === productId);
+  if (!originalProduct) return alert("❌ Error: Product not found.");
+
+  if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
+    alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for batches.");
+    return;
+  }
+
+  const isDuplicate = products.some(p => p.sku.toLowerCase() === newSku.toLowerCase() && p.id !== productId);
+  if (isDuplicate) {
+    alert(`❌ SKU Error: The SKU "${newSku}" is already used by another product.`);
+    return;
+  }
+
+  let category = form.category.value;
+  let price = parseFloat(form.price.value);
+  
+  let finalStock = 0;
+  let finalQuantity = 0;
+  let finalUnit = "";
+  let expiryDate = originalProduct.expiry || "N/A";
+
+  if (category === "utensil") {
+    let piecesInput = parseFloat(form.pieces.value) || 0;
+    finalStock = piecesInput / 100;
+    finalQuantity = piecesInput;
+    finalUnit = "pcs";
+    expiryDate = "N/A";
+  } else {
+    let qtyInput = parseFloat(form.quantity.value) || 0;
+    let unit = form.unit.value;
+    
+    finalStock = (unit === "g") ? qtyInput / 1000 : qtyInput;
+    
+    if (unit === "g" && qtyInput >= 1000) {
+      finalQuantity = qtyInput / 1000; finalUnit = "kg";
+    } else if (unit === "kg" && qtyInput < 1) {
+      finalQuantity = Math.round(qtyInput * 1000); finalUnit = "g";
+    } else {
+      finalQuantity = qtyInput; finalUnit = unit;
+    }
+
+    const customDate = form.customExpiry.value;
+    if (customDate) {
+      expiryDate = customDate;
+    }
+  }
+
+  try {
+    const ref = doc(db, "products", productId);
+    await updateDoc(ref, {
+      sku: newSku,
+      name: form.name.value,
+      description: form.description.value,
+      category: category,
+      quantity: finalQuantity,
+      unit: finalUnit,
+      quantity_value: finalStock,
+      stock: finalStock,
+      price: price,
+      expiry: expiryDate 
+    });
+
+    alert("✅ Product updated successfully!");
+    showDashboard();
+  } catch (error) {
+    console.error("Update failed:", error);
+    alert("❌ Failed to update database.");
+  }
+}
+
+async function handleBatchPromotion(deletedSku) {
+  const baseSKU = deletedSku.replace("-N", "").replace("-P", "").replace("-O", "");
+  const remaining = products.filter(x => x.sku.startsWith(baseSKU) && x.sku !== deletedSku);
+
+  if (remaining.length === 1) {
+    const survivor = remaining[0];
+    const cleanName = survivor.name
+      .replace(" (New)", "")
+      .replace(" (Previous)", "")
+      .replace(" (Old)", "");
+
+    await updateDoc(doc(db, "products", survivor.id), {
+      name: cleanName,
+      sku: baseSKU
+    });
+  }
+}
+	
+// Delete Product
+window.deleteProduct = async function (id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+
+  if (confirm(`Are you sure you want to delete ${p.name}?`)) {
+    try {
+      await deleteDoc(doc(db, "products", id));
+      const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
+
+      const remainingBatches = products.filter(x => 
+        x.id !== id && 
+        (x.sku === baseSKU || x.sku === baseSKU + "-N" || x.sku === baseSKU + "-P" || x.sku === baseSKU + "-O")
+      );
+
+      if (remainingBatches.length === 1) {
+        const survivor = remainingBatches[0];
+        const cleanName = survivor.name
+          .replace(" (New)", "")
+          .replace(" (Previous)", "")
+          .replace(" (Old)", "");
+
+        await updateDoc(doc(db, "products", survivor.id), {
+          name: cleanName,
+          sku: baseSKU
+        });
+      }
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("❌ Error deleting product.");
+    }
+  }
+};
+
+// Adjust
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
+
+  const isUtensil = p.category.toLowerCase() === "utensil";
   let adjustAmount = parseFloat(value);
-  if (isNaN(adjustAmount)) return alert("❌ Invalid Input");
-  
-  let adjustKg = p.category === "utensil" ? adjustAmount / 100 : (isCustom ? adjustAmount / 1000 : adjustAmount);
-  let newStock = parseFloat(((p.stock || 0) + adjustKg).toFixed(3));
-  if (newStock < 0) return alert("❌ Stock cannot be lower than 0!");
+  if (isNaN(adjustAmount)) return alert("❌ Invalid value!");
 
-  await updateDoc(doc(db, "products", id), {
-    stock: newStock,
-    quantity: p.category === "utensil" ? Math.round(newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
-    unit: p.category === "utensil" ? "pcs" : (newStock < 1 ? "g" : "kg")
-  });
-  loadProducts();
+  try {
+    let adjustKg = isUtensil ? (adjustAmount / 100) : (isCustom ? adjustAmount / 1000 : adjustAmount);
+    const currentStock = parseFloat(p.stock || 0);
+    const newStock = parseFloat((currentStock + adjustKg).toFixed(3));
+
+    if (newStock < 0) return alert("❌ Insufficient stock.");
+
+    if (adjustKg > 0 && !isUtensil) {
+      const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
+      const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "").replace(" (Old)", "");
+      
+      const prevBatch = products.find(x => x.sku === baseSKU + "-P");
+      const newBatch = products.find(x => x.sku === baseSKU + "-N");
+
+      if (prevBatch && newBatch) {
+        const confirmShift = confirm(`⚠️ Warning: ${prevBatch.name} still has ${prevBatch.stock}kg left.\nAdding a new batch will move it to "Old". Continue?`);
+        if (!confirmShift) return;
+
+        await updateDoc(doc(db, "products", prevBatch.id), {
+          name: cleanName + " (Old)",
+          sku: baseSKU + "-O"
+        });
+
+        await updateDoc(doc(db, "products", newBatch.id), {
+          name: cleanName + " (Previous)",
+          sku: baseSKU + "-P"
+        });
+      } 
+      else {
+        await updateDoc(doc(db, "products", id), { 
+          name: cleanName + " (Previous)", 
+          sku: baseSKU + "-P" 
+        });
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const newExpiryDate = prompt(`Enter Expiry for NEW batch:`, today);
+      if (!newExpiryDate) return;
+
+      await addDoc(collection(db, "products"), {
+        sku: baseSKU + "-N",
+        name: cleanName + " (New)",
+        category: p.category,
+        price: p.price,
+        stock: adjustKg,
+        quantity_value: adjustKg,
+        quantity: adjustKg < 1 ? Math.round(adjustKg * 1000) : adjustKg,
+        unit: adjustKg < 1 ? "g" : "kg",
+        expiry: newExpiryDate,
+        created_at: serverTimestamp()
+      });
+
+    } 
+    else {
+      if (newStock <= 0 && !isUtensil) {
+        await deleteDoc(doc(db, "products", id));
+        await handleBatchPromotion(p.sku);
+      } else {
+        await updateDoc(doc(db, "products", id), {
+          stock: newStock,
+          quantity: isUtensil ? Math.round(newStock * 100) : (newStock < 1 ? Math.round(newStock * 1000) : newStock),
+          unit: isUtensil ? "pcs" : (newStock < 1 ? "g" : "kg")
+        });
+      }
+    }
+
+    await addDoc(collection(db, "transactions"), {
+      productId: id,
+      productName: p.name,
+      totalValue: Math.abs(adjustKg * (p.price || 0)),
+      change: adjustKg,
+      type: adjustKg > 0 ? "Restock" : "Usage",
+      timestamp: serverTimestamp()
+    });
+
+  } catch (error) {
+    console.error(error);
+  }
 };
+	
+// Stock Color
+function stockColor(stock) {
+  if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
+  if ((stock || 0) <= 6) return "bg-warning fw-bold";
+  return "bg-success text-white fw-bold";
+}
 
+// APPLY FILTERS AND SORTING
 function applyFiltersAndRender() {
-  let list = currentCategory === 'all' ? [...products] : products.filter(p => p.category === currentCategory);
-  if (sortMode === "az") list.sort((a,b) => a.name.localeCompare(b.name));
+  let list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
+  const q = (searchQuery || "").toString().trim().toLowerCase();
+
+  if (q !== "") {
+    list = list.filter(p => {
+      const name = (p.name ?? "").toString().toLowerCase();
+      const sku = (p.sku ?? "").toString().toLowerCase();
+      const category = (p.category ?? "").toString().toLowerCase();
+      const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
+      const stockStr = (p.stock ?? "").toString().toLowerCase();
+      const kgValueStr = (p.quantity_value ?? "").toString().toLowerCase();
+
+      return (
+        name.includes(q) ||
+        sku.includes(q) ||
+        category.includes(q) ||
+        quantityStr.includes(q) ||
+        kgValueStr.includes(q) ||
+        stockStr.includes(q)
+      );
+    });
+  }
+
+  const startDate = document.getElementById("startDate")?.value || "";
+  const endDate = document.getElementById("endDate")?.value || "";
+  if (startDate || endDate) {
+    list = list.filter(p => {
+      if (!p.expiry || p.expiry === "N/A") return false;
+      if (startDate && p.expiry < startDate) return false;
+      if (endDate && p.expiry > endDate) return false;
+      return true;
+    });
+  }
+
+  if (sortMode === "az") list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  if (sortMode === "za") list.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
+  if (sortMode === "stockLowHigh") list.sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
+  if (sortMode === "stockHighLow") list.sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
+
   renderTable(list);
 }
 
+// Render Table
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
-  tbody.innerHTML = list.map(p => `
-    <tr>
-      <td>${p.sku}</td>
-      <td>${p.name}</td>
-      <td>${p.stock.toFixed(2)}</td>
-      <td>${p.category === 'utensil' ? Math.round(p.stock*100) : '—'}</td>
-      <td>₱${p.price}</td>
-      <td>${p.category === 'utensil' ? '—' : p.quantity + ' ' + p.unit}</td>
-      <td>₱${(p.stock * p.price).toFixed(2)}</td>
-      <td><span class="badge bg-secondary">${p.expiry || 'N/A'}</span></td>
-      <td>
-        <button class="btn btn-sm btn-outline-success" onclick="applyAdjust('${p.id}', prompt('Amount:'), false)">Adjust</button>
-      </td>
-    </tr>
-  `).join("");
-}
 
+  tbody.innerHTML = list.map(p => {
+    const price = (typeof p.price === 'number') ? p.price : 0;
+    const stock = (typeof p.stock === 'number') ? p.stock : 0;
+    const isUtensils = (p.category.toLowerCase() === "utensil");
+    
+    const pieces = isUtensils ? Math.round(stock * 100) : 0;
+    const totalValue = isUtensils ? (price * pieces) : (price * stock);
+    const quantityDisplay = isUtensils ? "—" : (p.quantity ? `${p.quantity} ${p.unit}` : "—");
+
+    let expiryHTML = '—';
+    if (!isUtensils && p.expiry && p.expiry !== "N/A") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expDate = new Date(p.expiry);
+      expDate.setHours(0, 0, 0, 0);
+
+      const diffTime = expDate.getTime() - today.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      let badgeClass = "bg-info text-dark"; 
+      let countdownText = `${diffDays} days left`;
+
+      if (diffDays < 0) {
+        badgeClass = "bg-danger";
+        countdownText = "EXPIRED";
+      } else if (diffDays === 0) {
+        badgeClass = "bg-danger";
+        countdownText = "EXPIRES TODAY";
+      } else if (diffDays <= 7) {
+        badgeClass = "bg-warning text-dark";
+        countdownText = "Expiring Soon!";
+      }
+
+      expiryHTML = `
+        <span class="badge ${badgeClass}">${p.expiry}</span>
+        <div style="font-size: 0.75rem; margin-top: 2px;" class="fw-bold text-uppercase">
+          ${countdownText}
+        </div>
+      `;
+    }
+
+    let adjustMenuHTML = "";
+    if (isUtensils) {
+      adjustMenuHTML = `
+        <li class="fw-bold px-2 small">Adjust Pieces</li>
+        <li class="px-2">
+          <input type="number" id="adj-${p.id}" class="form-control form-control-sm mb-2" placeholder="+ or - pieces">
+          <button class="btn btn-sm btn-primary w-100" 
+            onclick="applyAdjust('${p.id}', document.getElementById('adj-${p.id}').value, false)">
+            Update Pieces
+          </button>
+        </li>
+      `;
+    } else {
+      adjustMenuHTML = `
+        <li class="fw-bold px-2 small">Quick Adjust (KG)</li>
+        <li class="d-flex flex-wrap justify-content-between px-2 my-1 gap-1">
+          <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -3)">-3</button>
+          <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -2)">-2</button>
+          <button class="btn btn-xs btn-danger" onclick="applyAdjust('${p.id}', -1)">-1</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 3)">+3</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 2)">+2</button>
+          <button class="btn btn-xs btn-success" onclick="applyAdjust('${p.id}', 1)">+1</button>
+        </li>
+        <li class="fw-bold px-2 mt-2 small">Custom (Grams)</li>
+        <li class="px-2">
+          <input type="number" id="adj-${p.id}" class="form-control form-control-sm mb-2" placeholder="e.g. 500 or -500">
+          <button class="btn btn-sm btn-primary w-100" 
+            onclick="applyAdjust('${p.id}', document.getElementById('adj-${p.id}').value, true)">
+            Apply
+          </button>
+        </li>
+      `;
+    }
+
+    return `
+      <tr>
+        <td>${p.sku ?? ''}</td>
+        <td>${p.name ?? ''}</td>
+        <td class="${stockColor(stock)} text-center fw-bold">${stock.toFixed(2)}</td>
+        <td>${isUtensils ? `<strong>${pieces.toLocaleString()}</strong> pcs` : `—`}</td>
+        <td>₱${price.toFixed(2)}</td>
+        <td>${quantityDisplay}</td>
+        <td>₱${Number(totalValue).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td>${expiryHTML}</td>
+        <td>
+          <div class="d-flex gap-1">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Adjust
+              </button>
+              <ul class="dropdown-menu p-2" style="min-width: 200px;">
+                ${adjustMenuHTML}
+              </ul>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+	
+// Sorting
+window.sortProducts = function () {
+  sortMode = document.getElementById("sortSelect").value || "";
+  applyFiltersAndRender();
+};
+
+// Select Category
+window.selectCategory = function (cat) {
+  currentCategory = cat;
+  applyFiltersAndRender();
+};
+
+// Search
+window.filterProducts = function () {
+  searchQuery = document.getElementById("searchInput").value;
+  applyFiltersAndRender();
+};
+
+// Dashboard Render
 window.showDashboard = function () {
+  const currentSearch = searchQuery || "";
+  const startDate = document.getElementById("startDate")?.value || "";
+  const endDate = document.getElementById("endDate")?.value || "";
+
+  let filteredList = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
+
+  if (currentSearch.trim() !== "") {
+    const q = currentSearch.toLowerCase();
+    filteredList = filteredList.filter(p => 
+      (p.name || "").toLowerCase().includes(q) || (p.sku || "").toLowerCase().includes(q)
+    );
+  }
+
+  if (startDate || endDate) {
+    filteredList = filteredList.filter(p => {
+      if (!p.expiry || p.expiry === "N/A") return false;
+      if (startDate && p.expiry < startDate) return false;
+      if (endDate && p.expiry > endDate) return false;
+      return true;
+    });
+  }
+
+  let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
+
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Inventory Controls</h4>
-        <div>
-            <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
+        <h4>Inventory Dashboard</h4>
+        <div class="d-flex align-items-center">
+            <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
+            <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
+            <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
+            <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
+            <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
+            <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
             <button class="btn btn-danger" onclick="openWatchParty()">🍿 Watch Party</button>
         </div>
     </div>
-    <table class="table table-striped border">
+
+    <div class="card p-3 mb-3 shadow-sm border-0 bg-light">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="small fw-bold text-muted">🔍 Search Name/SKU</label>
+          <input type="text" id="searchInput" class="form-control" placeholder="Type to search..." 
+                 onkeyup="window.updateSearchValue(this.value)" value="${currentSearch}">
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted">📅 Expiry Start Date</label>
+          <input type="date" id="startDate" class="form-control" onchange="applyFiltersAndRender()" value="${startDate}">
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold text-muted">📅 Expiry End Date</label>
+          <input type="date" id="endDate" class="form-control" onchange="applyFiltersAndRender()" value="${endDate}">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-danger w-100" onclick="clearDateFilters()">✖ Clear Dates</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm">
+            <h5 class="text-muted small">Total Products</h5>
+            <h2>${filteredList.length}</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm">
+            <h5 class="text-muted small">Total Items (Stock)</h5>
+            <h2>${totalItems.toFixed(2)}</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card p-3 text-center shadow-sm">
+            <h5 class="text-muted small">Total Inventory Value</h5>
+            <h2>₱${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+          </div>
+        </div>
+    </div>
+
+    <table class="table table-striped align-middle border">
         <thead class="table-dark">
-            <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Pieces</th><th>Price</th><th>KG Info</th><th>Total Value</th><th>Expiry</th><th>Actions</th></tr>
+            <tr>
+                <th>SKU</th>
+                <th>Name</th>
+                <th>Stock</th>
+                <th>Pieces</th>
+                <th>Price</th>
+                <th>KG / Info</th>
+                <th>Total Value</th>
+                <th>Expiry Status</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody id="productTableBody"></tbody>
     </table>
   `;
-  renderTable(products);
+
+  applyFiltersAndRender();
+
+  if (currentSearch) {
+    const input = document.getElementById("searchInput");
+    if (input) {
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+    }
+  }
 };
 
-// 🍿 WATCH PARTY LOGIC CONTROLLER (WITH EVENT LOOP SYNC)
+window.updateSearchValue = function(val) {
+  searchQuery = val;
+  applyFiltersAndRender();
+};
+
+window.clearDateFilters = function() {
+    const start = document.getElementById("startDate");
+    const end = document.getElementById("endDate");
+    if(start) start.value = "";
+    if(end) end.value = "";
+    applyFiltersAndRender();
+};
+	
+// Real time Analytics Engine
+let activeListeners = [];
+
+function clearActiveListeners() {
+  activeListeners.forEach(unsubscribe => unsubscribe());
+  activeListeners = [];
+}
+
+let myChart = null; 
+
+function renderChart(labels, data, title) {
+    const canvasEl = document.getElementById('analyticsChart');
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    myChart = new Chart(ctx, {
+        type: 'bar', 
+        data: {
+            labels: labels,
+            datasets: [{
+                label: title,
+                data: data,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: true, position: 'top' }
+            }
+        }
+    });
+}
+
+function startRealtimeChart(range) {
+  const now = new Date();
+  let startDate = new Date();
+
+  if (range === "weekly") {
+    startDate.setDate(now.getDate() - 28);
+  } else if (range === "monthly") {
+    startDate.setMonth(0, 1);
+  } else if (range === "yearly") {
+    startDate.setFullYear(now.getFullYear() - 5);
+  }
+  startDate.setHours(0, 0, 0, 0);
+
+  const q = query(
+    collection(db, "transactions"),
+    where("timestamp", ">=", startDate)
+  );
+
+  const unsubscribe = onSnapshot(q, snapshot => {
+    let groupedData = {};
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const date = data.timestamp?.toDate();
+      if (!date) return;
+
+      let key = "";
+      
+      if (range === "weekly") {
+        const startOfWeek = new Date(date);
+        startOfWeek.setDate(date.getDate() - date.getDay());
+        key = "Week " + startOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      } 
+      else if (range === "monthly") {
+        key = date.toLocaleDateString("en-US", { month: "long" });
+      } 
+      else if (range === "yearly") {
+        key = date.getFullYear().toString();
+      }
+
+      if (!groupedData[key]) groupedData[key] = 0;
+      groupedData[key] += Math.abs(Number(data.change)) || 0;
+    });
+
+    const sortedLabels = Object.keys(groupedData);
+    const sortedValues = sortedLabels.map(label => groupedData[label]);
+
+    renderChart(sortedLabels, sortedValues, range.toUpperCase() + " MOVEMENT");
+  });
+
+  activeListeners.push(unsubscribe);
+}
+
+function loadRevenueAnalytics() {
+  const q = query(collection(db, "transactions"));
+
+  const unsubscribe = onSnapshot(q, snapshot => {
+    let sales = 0;           
+    let purchases = 0;       
+    let totalMovement = 0;
+    let productTotals = {};
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const changeVal = Number(d.change) || 0;
+      const totalVal = Number(d.totalValue) || 0;
+
+      if (changeVal < 0) {
+        sales += Math.abs(totalVal);
+      } else if (changeVal > 0) {
+        purchases += Math.abs(totalVal);
+      }
+
+      totalMovement += Math.abs(changeVal);
+
+      if (d.productName) {
+        productTotals[d.productName] = (productTotals[d.productName] || 0) + Math.abs(changeVal);
+      }
+    });
+
+    const revCard = document.getElementById("revenueCard");
+    if (revCard) revCard.innerText = "₱" + sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    
+    const expenseEl = document.getElementById("expenseCard");
+    if (expenseEl) expenseEl.innerText = "₱" + purchases.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+    const moveCard = document.getElementById("movementCard");
+    if (moveCard) moveCard.innerText = totalMovement.toFixed(2) + " KG";
+
+    const topCard = document.getElementById("topProductCard");
+    if (topCard) {
+      const productKeys = Object.keys(productTotals);
+      const top = productKeys.sort((a, b) => productTotals[b] - productTotals[a])[0];
+      topCard.innerText = top || "-";
+    }
+  });
+
+  activeListeners.push(unsubscribe);
+}
+
+window.showAnalytics = function () {
+  clearActiveListeners();
+
+  document.getElementById("main").innerHTML = `
+    <div class="container mt-4">
+      <h3>Inventory Analytics</h3>
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <button class="btn btn-outline-primary chart-btn" data-range="weekly">Weekly</button>
+          <button class="btn btn-outline-success chart-btn" data-range="monthly">Monthly</button>
+          <button class="btn btn-outline-danger chart-btn" data-range="yearly">Yearly</button>
+          <button id="exportPDF" class="btn btn-dark ms-2">Export PDF</button>
+        </div>
+        <button class="btn btn-secondary" id="backDashboard">⬅ Back</button>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card p-3 shadow-sm text-center">
+            <h6 class="text-muted">Total Purchases (In)</h6>
+            <h2 id="expenseCard" class="text-danger">₱0.00</h2>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3 shadow-sm text-center">
+            <h6 class="text-muted">Total Revenue</h6>
+            <h2 id="revenueCard" class="text-success">₱0.00</h2>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3 shadow-sm text-center">
+            <h6 class="text-muted">Total Movement</h6>
+            <h2 id="movementCard" class="text-primary">0 KG</h2>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card p-3 shadow-sm text-center">
+            <h6 class="text-muted">Top Product</h6>
+            <h2 id="topProductCard" class="text-warning">-</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-4 shadow-sm">
+        <canvas id="analyticsChart" height="120"></canvas>
+      </div>
+    </div>
+  `;
+
+  loadRevenueAnalytics();
+  startRealtimeChart("weekly"); 
+
+ document.getElementById("exportPDF").addEventListener("click", () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const now = new Date();
+  const timestamp = now.toLocaleString();
+  const fileDate = now.toISOString().split('T')[0];
+
+  doc.setFontSize(22);
+  doc.setTextColor(214, 139, 0); 
+  doc.text("Double'd Brew Inventory Report", 20, 20);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generated on: ${timestamp}`, 20, 30);
+  doc.line(20, 35, 190, 35);
+
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text("Summary Metrics:", 20, 45);
+  doc.setFontSize(12);
+  doc.text(`- Total Revenue: ${document.getElementById("revenueCard").innerText}`, 25, 55);
+  doc.text(`- Total Movement: ${document.getElementById("movementCard").innerText}`, 25, 65);
+  doc.text(`- Top Performing Product: ${document.getElementById("topProductCard").innerText}`, 25, 75);
+
+  const chartCanvas = document.getElementById('analyticsChart');
+  if (chartCanvas) {
+    const chartImage = chartCanvas.toDataURL("image/png", 1.0);
+    doc.text("Visual Analytics:", 20, 90);
+    doc.addImage(chartImage, 'PNG', 15, 95, 180, 90);
+  }
+
+  doc.save(`DoubleD'Brew_Report_${fileDate}.pdf`);
+});
+
+  document.querySelectorAll(".chart-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      startRealtimeChart(btn.dataset.range);
+    });
+  });
+
+  document.getElementById("backDashboard").addEventListener("click", () => {
+    clearActiveListeners();
+    showDashboard(); 
+  });
+};
+	
+// MANGO ANIMATION CONTROL
+let mangoAnimationOn = true; 
+
+window.toggleAnimation = function() {
+  mangoAnimationOn = !mangoAnimationOn; 
+
+  const slices = document.querySelectorAll('#app .mango-slice');
+  slices.forEach(slice => {
+    if (mangoAnimationOn) {
+      slice.style.display = 'block';
+    } else {
+      slice.style.display = 'none'; 
+    }
+  });
+
+  const btn = document.getElementById('toggleAnimationBtn');
+  if (btn) {
+    btn.textContent = mangoAnimationOn 
+      ? '🥭 Turn Off Mango Animation' 
+      : '🥭 Turn On Mango Animation';
+  }
+};
+
+// LOW STOCK
+window.showLowStock = function () {
+  const lowStock = products.filter(p => (p.stock || 0) <= 3);
+  if (lowStock.length === 0) {
+    alert("✅ All stocks are sufficient!");
+    return;
+  }
+
+  let rows = lowStock.map(p => `
+    <tr>
+      <td>${p.sku ?? ''}</td>
+      <td>${p.name ?? ''}</td>
+      <td class="${stockColor(p.stock ?? 0)} text-center">${p.stock ?? 0}</td>
+      <td>₱${(p.price ?? 0).toFixed(2)}</td>
+      <td>${p.kg ?? (p.kg_value ? (p.kg_value < 1 ? `${Math.round(p.kg_value*1000)} g` : `${+p.kg_value.toFixed(3)} kg`) : '')}</td>
+      <td>₱${(((p.price || 0) * (p.stock || 0))).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("main").innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>⚠️ Low Stock Products</h4>
+      <div>
+        <button class="btn btn-secondary me-2" onclick="showDashboard()">⬅️ Back</button>
+        <button class="btn btn-primary" onclick="exportXLSX()">⬇️ Export XLSX</button>
+      </div>
+    </div>
+
+    <table class="table table-striped align-middle">
+      <thead class="table-danger">
+        <tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th>KG</th><th>Total Value</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+};
+
+// Export XLSX
+window.exportXLSX = function () {
+    let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
+
+    let sheetData = [
+        [
+            "SKU", "Name", "Description", "Category", "Quantity", "Unit", "Quantity_Value",
+            "Price", "Old Stock", "New Stock", "Stock Change", "Total Value", "Pieces"
+        ]
+    ];
+
+    products.forEach(p => {
+        let newStock = Number(p.stock);
+        let oldStock = previousData[p.sku]?.stock;
+
+        let changeText = "— NEW ITEM";
+        let diffValue = 0;
+
+        if (typeof oldStock === "number") {
+            diffValue = newStock - oldStock;
+
+            if (diffValue > 0) {
+                changeText = `+${diffValue} ↑ INCREASE`;
+            } else if (diffValue < 0) {
+                changeText = `${diffValue} ↓ DECREASE`;
+            } else {
+                changeText = `0 — NO CHANGE`;
+            }
+        }
+
+        const pieces = p.category?.toLowerCase() === "utensil" ? newStock * 100 : "";
+        let totalValue = newStock * Number(p.price || 0);
+
+        sheetData.push([
+            p.sku, p.name, p.description, p.category, p.quantity || "", p.unit || "",
+            p.quantity_value || "", p.price || 0, typeof oldStock === "number" ? oldStock : "",
+            newStock, changeText, totalValue, pieces
+        ]);
+    });
+
+    let wb = XLSX.utils.book_new();
+    let ws = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+
+    const today = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `inventory (${today}).xlsx`);
+
+    let snapshot = {};
+    products.forEach(p => {
+        snapshot[p.sku] = { stock: Number(p.stock) };
+    });
+    localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
+};
+
+// 🍿 WATCH PARTY CINEMATIC ENGINE
 const wpDashboard = document.getElementById('watchPartyDashboard');
 const wpWelcomeGate = document.getElementById('wpWelcomeGate');
 const wpTheaterPanel = document.getElementById('wpTheaterPanel');
 const wpPlayer = document.getElementById('wpSharedPlayer');
 const movieGrid = document.getElementById('movieUploadList');
-const syncIndicator = document.getElementById('syncIndicator');
-
-let isBroadcastingSync = false;
 
 window.openWatchParty = function() {
   wpDashboard.classList.remove('wp-hidden');
@@ -547,54 +1591,17 @@ window.openWatchParty = function() {
 document.getElementById('btnEnterTheater').addEventListener('click', () => {
   wpWelcomeGate.style.opacity = '0';
   wpWelcomeGate.style.pointerEvents = 'none';
+  
   setTimeout(() => {
     wpTheaterPanel.classList.remove('wp-hidden-stage');
     loadSharedMovies();
-    setupStreamingSyncListeners();
   }, 400);
 });
 
 document.getElementById('btnCloseParty').addEventListener('click', () => {
-  if (wpPlayer) wpPlayer.pause();
+  wpPlayer.pause();
   wpDashboard.classList.add('wp-hidden');
 });
-
-// Sync Pipeline Engine (Keeps timelines aligned across rooms)
-function setupStreamingSyncListeners() {
-  if (!wpPlayer) return;
-
-  // Track playback status updates locally
-  wpPlayer.addEventListener('play', () => {
-    if (isBroadcastingSync) return;
-    broadcastPlaybackEvent("PLAY", wpPlayer.currentTime);
-  });
-
-  wpPlayer.addEventListener('pause', () => {
-    if (isBroadcastingSync) return;
-    broadcastPlaybackEvent("PAUSE", wpPlayer.currentTime);
-  });
-
-  wpPlayer.addEventListener('seeked', () => {
-    if (isBroadcastingSync) return;
-    broadcastPlaybackEvent("SEEK", wpPlayer.currentTime);
-  });
-
-  // Intercept loop updates to reconcile time drifts
-  setInterval(() => {
-    if (!wpPlayer.paused && !isBroadcastingSync) {
-      // Keep checking sync channel loop positions periodically
-      syncIndicator.innerText = "🟢 Live Sync Active (" + Math.floor(wpPlayer.currentTime) + "s)";
-    }
-  }, 1000);
-}
-
-function broadcastPlaybackEvent(action, timestamp) {
-  isBroadcastingSync = true;
-  console.log(`[Sync Channel Outgoing]: ${action} sent at timestamp timeline index: ${timestamp}`);
-  
-  // Simulated socket receipt loop confirmation
-  setTimeout(() => { isBroadcastingSync = false; }, 300);
-}
 
 function loadSharedMovies() {
   const sharedMoviesCollection = [
@@ -603,26 +1610,30 @@ function loadSharedMovies() {
   ];
 
   movieGrid.innerHTML = '';
+  
   sharedMoviesCollection.forEach(movie => {
     const card = document.createElement('div');
     card.className = 'movie-card';
     card.innerHTML = `<h4>🎥 ${movie.title}</h4>`;
+    
     card.addEventListener('click', () => {
       wpPlayer.src = movie.url;
-      wpPlayer.load();
       wpPlayer.play();
+      console.log(`Streaming loaded video resource file: ${movie.title}`);
     });
+    
     movieGrid.appendChild(card);
   });
 }
 
+// Auto Login initialization
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
-  loadProducts();
+  setupRealtimeProducts();
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
