@@ -200,7 +200,7 @@ body {
 .wp-bg-blur {
   position: absolute; inset: 0;
   background-size: cover; background-position: center;
-  filter: brightness(0.4) contrast(1.1);
+  filter: brightness(0.6) contrast(1.1);
   transform: scale(1.05);
 }
 .wp-gate-content {
@@ -313,7 +313,11 @@ body {
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Double'd Brew Inventory</a>
 
-      <div class="d-flex ms-auto">
+      <div class="d-flex ms-auto align-items-center">
+        <!-- 📁 GOOGLE DRIVE LINK -->
+        <a href="https://drive.google.com" target="_blank" class="btn btn-outline-light me-2 fw-bold text-decoration-none">
+          📁 Google Drive
+        </a>
 
         <!-- SORTING DROPDOWN -->
         <select id="sortSelect" class="form-select me-2" onchange="sortProducts()" style="width:170px;">
@@ -326,21 +330,19 @@ body {
 
         <button class="btn btn-outline-light me-2" onclick="exportXLSX()">Export XLSX</button>
         <button class="btn btn-warning" onclick="logout()">Logout</button>
-		<div class="dropdown ms-2">
-  <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
-    ⋮
-  </button>
-  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsMenuBtn">
-    <li>
-      <button class="dropdown-item" id="toggleAnimationBtn" onclick="toggleAnimation()">
-        🥭 Turn Off Mango Animation
-      </button>
-    </li>
-    <!-- You can add more settings here later -->
-  </ul>
-</div>
-
-
+        
+        <div class="dropdown ms-2">
+          <button class="btn btn-light dropdown-toggle" type="button" id="settingsMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
+            ⋮
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsMenuBtn">
+            <li>
+              <button class="dropdown-item" id="toggleAnimationBtn" onclick="toggleAnimation()">
+                🥭 Turn Off Mango Animation
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </nav>
@@ -352,8 +354,8 @@ body {
 <div id="watchPartyDashboard" class="wp-hidden">
   <!-- STAGE 1: Welcome Greeting Gate -->
   <div id="wpWelcomeGate" class="wp-overlay">
-    <!-- Replace 'assets/img/couple-photo.jpg' with your actual image path or online link -->
-    <div class="wp-bg-blur" style="background-image: url('assets/img/couple-photo.jpg');"></div>
+    <!-- Image updated to use image_3.png seamlessly -->
+    <div class="wp-bg-blur" style="background-image: url('image_3.png');"></div>
     <div class="wp-gate-content">
       <h1 class="wp-greeting">I Love You Leigh</h1>
       <button id="btnEnterTheater" class="wp-btn-enter">✨ Enter Movie Night</button>
@@ -399,9 +401,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let products = [];
-let currentCategory = "all"; // pang filter
-let sortMode = ""; // current sort (az, za, stockLowHigh, stockHighLow)
-let searchQuery = ""; // search string
+let currentCategory = "all"; 
+let sortMode = ""; 
+let searchQuery = ""; 
 
 window.login = function () {
   const email = document.getElementById("username").value.trim();
@@ -412,7 +414,6 @@ window.login = function () {
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("welcomePage").style.display = "block";
 
-    // Optional auto-continue after 10 seconds
     setTimeout(() => {
       goToDashboard();
     }, 10000);
@@ -428,15 +429,12 @@ window.logout = function () {
   document.getElementById("loginForm").style.display = "flex";
 };
 
-// Welcome Page
 window.goToDashboard = function () {
   document.getElementById("welcomePage").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadProducts();
 };
 
-
-// KG PARSING UTIL
 function parseKgInput(input) {
   if (!input || input.toString().trim() === "") return { kg_value: null, kg_display: "" };
   let s = input.toString().trim().toLowerCase();
@@ -473,7 +471,6 @@ function parseKgInput(input) {
   return { kg_value, kg_display };
 }
 
-// LOAD PRO
 async function loadProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
   products = [];
@@ -483,8 +480,6 @@ async function loadProducts() {
   showDashboard();
 }
 
-// ADD PRO
-// ADD PRO
 window.addProduct = function () {
   const today = new Date().toISOString().split('T')[0];
 
@@ -548,7 +543,6 @@ window.addProduct = function () {
     document.getElementById("utensilFields").style.display = isIngredient ? "none" : "block";
     document.getElementById("priceLabelText").innerText = isIngredient ? "Price (Per KG):" : "Price (Per Piece):";
     
-    // Make expiry required only for ingredients
     document.getElementsByName("expiryDate")[0].required = isIngredient;
   };
 
@@ -562,13 +556,11 @@ async function saveNewProduct(e) {
   const price = parseFloat(form.price.value);
   const newSku = form.sku.value.trim();
 
-  // 🛡️ SKU VALIDATION: Prevent manual batch suffixes
   if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
     alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for the batching system.");
     return;
   }
 
-  // 🛡️ SKU VALIDATION: Prevent Duplicate SKUs
   const skuExists = products.some(p => p.sku.toLowerCase() === newSku.toLowerCase());
   if (skuExists) {
     alert(`❌ SKU Error: The SKU "${newSku}" is already assigned to another product.`);
@@ -592,8 +584,6 @@ async function saveNewProduct(e) {
     finalStock = unitInput === "g" ? qtyInput / 1000 : qtyInput;
     finalQuantity = qtyInput;
     finalUnit = unitInput;
-
-    // 🔥 Use the custom date picked by the user
     expiryDate = form.expiryDate.value || "N/A";
   }
 
@@ -621,15 +611,10 @@ async function saveNewProduct(e) {
   }
 }
 
-// EDIT PRO
-// EDIT PRO
 window.editProduct = function (id) {
   const p = products.find(x => x.id === id) || {};
   const isUtensil = p.category === "utensil";
-  
-  // Strip suffixes for editing so the user sees the "Base SKU"
-  const baseSku = (p.sku || "").replace("-N", "").replace("-P", "");
-  // Get today's date in YYYY-MM-DD format for the 'min' attribute
+  const baseSku = (p.sku || "").replace("-N", "").replace("-P", "").replace("-O", "");
   const today = new Date().toISOString().split('T')[0];
 
   document.getElementById("main").innerHTML = `
@@ -708,7 +693,6 @@ async function updateProduct(e) {
   const originalProduct = products.find(x => x.id === productId);
   if (!originalProduct) return alert("❌ Error: Product not found.");
 
-  // 🛡️ SKU VALIDATION
   if (newSku.endsWith("-N") || newSku.endsWith("-P")) {
     alert("❌ SKU Error: Please do not end the SKU with '-N' or '-P'. These are reserved for batches.");
     return;
@@ -740,7 +724,6 @@ async function updateProduct(e) {
     
     finalStock = (unit === "g") ? qtyInput / 1000 : qtyInput;
     
-    // Auto-formatting logic
     if (unit === "g" && qtyInput >= 1000) {
       finalQuantity = qtyInput / 1000; finalUnit = "kg";
     } else if (unit === "kg" && qtyInput < 1) {
@@ -749,7 +732,6 @@ async function updateProduct(e) {
       finalQuantity = qtyInput; finalUnit = unit;
     }
 
-    // 🔥 NEW EXPIRY LOGIC: Take value from date picker
     const customDate = form.customExpiry.value;
     if (customDate) {
       expiryDate = customDate;
@@ -780,15 +762,10 @@ async function updateProduct(e) {
   }
 }
 
-	// --- 1. PLACE THE HELPER HERE ---
 async function handleBatchPromotion(deletedSku) {
-  // Fix: removed the double 'doc(' call from the previous snippet
   const baseSKU = deletedSku.replace("-N", "").replace("-P", "").replace("-O", "");
-  
-  // Find any remaining batches for this product in the local 'products' array
   const remaining = products.filter(x => x.sku.startsWith(baseSKU) && x.sku !== deletedSku);
 
-  // If only one remains, promote it to the main product
   if (remaining.length === 1) {
     const survivor = remaining[0];
     const cleanName = survivor.name
@@ -803,27 +780,19 @@ async function handleBatchPromotion(deletedSku) {
   }
 }
 	
-//Delete Product
 window.deleteProduct = async function (id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
 
   if (confirm(`Are you sure you want to delete ${p.name}?`)) {
     try {
-      // 1. Perform the deletion
       await deleteDoc(doc(db, "products", id));
-
-      // 2. Identify the base SKU (e.g., "MNG" from "MNG-P")
       const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
-
-      // 3. Find remaining batches for this product (excluding the one we just deleted)
       const remainingBatches = products.filter(x => 
         x.id !== id && 
         (x.sku === baseSKU || x.sku === baseSKU + "-N" || x.sku === baseSKU + "-P" || x.sku === baseSKU + "-O")
       );
 
-      // 4. CONSOLIDATION LOGIC:
-      // If only one batch is left after deletion, promote it to be the "Main" product
       if (remainingBatches.length === 1) {
         const survivor = remainingBatches[0];
         const cleanName = survivor.name
@@ -845,9 +814,6 @@ window.deleteProduct = async function (id) {
   }
 };
 
-	
-
-// Adjust
 window.applyAdjust = async function (id, value, isCustom = false) {
   const p = products.find(x => x.id === id);
   if (!p) return;
@@ -863,7 +829,6 @@ window.applyAdjust = async function (id, value, isCustom = false) {
 
     if (newStock < 0) return alert("❌ Insufficient stock.");
 
-    // --- SCENARIO: ADDING NEW STOCK (RESTOCK) ---
     if (adjustKg > 0 && !isUtensil) {
       const baseSKU = p.sku.replace("-N", "").replace("-P", "").replace("-O", "");
       const cleanName = p.name.replace(" (New)", "").replace(" (Previous)", "").replace(" (Old)", "");
@@ -871,24 +836,20 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       const prevBatch = products.find(x => x.sku === baseSKU + "-P");
       const newBatch = products.find(x => x.sku === baseSKU + "-N");
 
-      // IF PREVIOUS AND NEW BOTH EXIST -> Shift to "Old"
       if (prevBatch && newBatch) {
         const confirmShift = confirm(`⚠️ Warning: ${prevBatch.name} still has ${prevBatch.stock}kg left.\nAdding a new batch will move it to "Old". Continue?`);
         if (!confirmShift) return;
 
-        // 1. Move Previous to Old
         await updateDoc(doc(db, "products", prevBatch.id), {
           name: cleanName + " (Old)",
           sku: baseSKU + "-O"
         });
 
-        // 2. Move current New to Previous
         await updateDoc(doc(db, "products", newBatch.id), {
           name: cleanName + " (Previous)",
           sku: baseSKU + "-P"
         });
       } 
-      // IF ONLY ONE BATCH EXISTS -> Standard Shift
       else {
         await updateDoc(doc(db, "products", id), { 
           name: cleanName + " (Previous)", 
@@ -896,7 +857,6 @@ window.applyAdjust = async function (id, value, isCustom = false) {
         });
       }
 
-      // CREATE THE NEWEST BATCH
       const today = new Date().toISOString().split('T')[0];
       const newExpiryDate = prompt(`Enter Expiry for NEW batch:`, today);
       if (!newExpiryDate) return;
@@ -915,11 +875,9 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       });
 
     } 
-    // --- SCENARIO: REDUCING STOCK (USAGE) ---
     else {
       if (newStock <= 0 && !isUtensil) {
         await deleteDoc(doc(db, "products", id));
-        // Trigger auto-promotion for survivors
         await handleBatchPromotion(p.sku);
       } else {
         await updateDoc(doc(db, "products", id), {
@@ -930,7 +888,6 @@ window.applyAdjust = async function (id, value, isCustom = false) {
       }
     }
 
-    // Record Transaction for Real-Time Analytics
     await addDoc(collection(db, "transactions"), {
       productId: id,
       productName: p.name,
@@ -946,52 +903,44 @@ window.applyAdjust = async function (id, value, isCustom = false) {
   }
 };
 	
-// Stock Color
 function stockColor(stock) {
   if ((stock || 0) <= 3) return "bg-danger text-white fw-bold";
   if ((stock || 0) <= 6) return "bg-warning fw-bold";
   return "bg-success text-white fw-bold";
 }
 
-// APPLY F S R
 function applyFiltersAndRender() {
-  // category filter
   let list = (currentCategory === 'all') ? [...products] : products.filter(p => p.category === currentCategory);
-
-  // search filter
   const q = (searchQuery || "").toString().trim().toLowerCase();
 
-if (q !== "") {
-  list = list.filter(p => {
-    const name = (p.name ?? "").toString().toLowerCase();
-    const sku = (p.sku ?? "").toString().toLowerCase();
-    const category = (p.category ?? "").toString().toLowerCase();
-    const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
-    const stockStr = (p.stock ?? "").toString().toLowerCase();
-    const kgValueStr = (p.quantity_value ?? "").toString().toLowerCase();
+  if (q !== "") {
+    list = list.filter(p => {
+      const name = (p.name ?? "").toString().toLowerCase();
+      const sku = (p.sku ?? "").toString().toLowerCase();
+      const category = (p.category ?? "").toString().toLowerCase();
+      const quantityStr = `${p.quantity ?? ''} ${p.unit ?? ''}`.toLowerCase();
+      const stockStr = (p.stock ?? "").toString().toLowerCase();
+      const kgValueStr = (p.quantity_value ?? "").toString().toLowerCase();
 
-    return (
-      name.includes(q) ||
-      sku.includes(q) ||
-      category.includes(q) ||
-      quantityStr.includes(q) ||
-      kgValueStr.includes(q) ||
-      stockStr.includes(q)
-    );
-  });
-}
+      return (
+        name.includes(q) ||
+        sku.includes(q) ||
+        category.includes(q) ||
+        quantityStr.includes(q) ||
+        kgValueStr.includes(q) ||
+        stockStr.includes(q)
+      );
+    });
+  }
 
-  // sorting
   if (sortMode === "az") list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   if (sortMode === "za") list.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
   if (sortMode === "stockLowHigh") list.sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
   if (sortMode === "stockHighLow") list.sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
 
-  // render
   renderTable(list);
 }
 
-// Render Tabler
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
@@ -1000,18 +949,14 @@ function renderTable(list) {
   now.setHours(0, 0, 0, 0);
 
   tbody.innerHTML = list.map(p => {
-    // 1. Calculations & Type Safety
     const price = (typeof p.price === 'number') ? p.price : 0;
     const stock = (typeof p.stock === 'number') ? p.stock : 0;
     const isUtensils = (p.category.toLowerCase() === "utensil");
     
-    // Utensils: 1 stock = 100 pieces. 
     const pieces = isUtensils ? Math.round(stock * 100) : 0;
     const totalValue = isUtensils ? (price * pieces) : (price * stock);
-
     const quantityDisplay = isUtensils ? "—" : (p.quantity ? `${p.quantity} ${p.unit}` : "—");
 
-    // 2. Expiry & Countdown Logic
     let expiryHTML = '—';
     if (!isUtensils && p.expiry && p.expiry !== "N/A") {
       const today = new Date();
@@ -1044,10 +989,8 @@ function renderTable(list) {
       `;
     }
 
-    // 3. Dynamic Adjust Menu Based on Category
     let adjustMenuHTML = "";
     if (isUtensils) {
-      // Utensil: Adjust by pieces
       adjustMenuHTML = `
         <li class="fw-bold px-2 small">Adjust Pieces</li>
         <li class="px-2">
@@ -1059,7 +1002,6 @@ function renderTable(list) {
         </li>
       `;
     } else {
-      // Ingredient: Full Quick Adjust (-3 to +3) + Custom Grams
       adjustMenuHTML = `
         <li class="fw-bold px-2 small">Quick Adjust (KG)</li>
         <li class="d-flex flex-wrap justify-content-between px-2 my-1 gap-1">
@@ -1110,28 +1052,22 @@ function renderTable(list) {
   }).join("");
 }
 	
-// Sorting
 window.sortProducts = function () {
   sortMode = document.getElementById("sortSelect").value || "";
   applyFiltersAndRender();
 };
 
-// Select Category
 window.selectCategory = function (cat) {
   currentCategory = cat;
-  // clear search when switching category? (keeping it so user can combine)
   applyFiltersAndRender();
 };
 
-// Search
 window.filterProducts = function () {
   searchQuery = document.getElementById("searchInput").value;
   applyFiltersAndRender();
 };
 
-// Dashboard
 window.showDashboard = function () {
-  // 1. Get current values from the UI (checking if elements exist first)
   const searchInput = document.getElementById("searchInput");
   const startInput = document.getElementById("startDate");
   const endInput = document.getElementById("endDate");
@@ -1140,22 +1076,17 @@ window.showDashboard = function () {
   const startDate = startInput?.value || "";
   const endDate = endInput?.value || "";
 
-  // 2. Apply Category + Search + Date Range Filter
   const filteredList = products.filter(p => {
-    // Category Filter
     const matchesCategory = (currentCategory === 'all' || p.category === currentCategory);
-    
-    // Search Filter
     const matchesSearch = (p.name || "").toLowerCase().includes(search) || 
                           (p.sku || "").toLowerCase().includes(search);
     
-    // Date Range Filter (Specific to Expiry)
     let matchesDate = true;
     if (startDate || endDate) {
       if (!p.expiry) {
         matchesDate = false; 
       } else {
-        const expiryDate = p.expiry; // Expecting YYYY-MM-DD
+        const expiryDate = p.expiry; 
         if (startDate && expiryDate < startDate) matchesDate = false;
         if (endDate && expiryDate > endDate) matchesDate = false;
       }
@@ -1164,11 +1095,9 @@ window.showDashboard = function () {
     return matchesCategory && matchesSearch && matchesDate;
   });
 
-  // 3. REAL-TIME ANALYTICS CALCULATIONS
   let totalItems = filteredList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
   let totalValue = filteredList.reduce((sum, p) => sum + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
 
-  // 4. Build the UI
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inventory Dashboard</h4>
@@ -1245,7 +1174,6 @@ window.showDashboard = function () {
 
   renderTable(filteredList);
 
-  // Focus-Fix: Keeps cursor at the end of the input so search feels natural
   if (search) {
     const input = document.getElementById("searchInput");
     if (input) {
@@ -1256,12 +1184,10 @@ window.showDashboard = function () {
   }
 };
 
-// 5. GLOBAL FILTER HANDLER
 window.applyFiltersAndRender = function() {
     window.showDashboard();
 };
 
-// 6. HELPER: Clear Date Filters
 window.clearDateFilters = function() {
     const start = document.getElementById("startDate");
     const end = document.getElementById("endDate");
@@ -1270,34 +1196,23 @@ window.clearDateFilters = function() {
     window.applyFiltersAndRender();
 };
 
-window.applyFiltersAndRender = function() {
-    // We just call showDashboard() because it already contains 
-    // the filtering logic and the card calculations.
-    window.showDashboard();
-};
-	
-	//Real time Analytics
-// Global array to manage real-time listeners
 let activeListeners = [];
 
-// Helper function to stop all background listeners
 function clearActiveListeners() {
   activeListeners.forEach(unsubscribe => unsubscribe());
   activeListeners = [];
 }
 
-	let myChart = null; // Global variable to track the chart instance
+let myChart = null; 
 
 function renderChart(labels, data, title) {
     const ctx = document.getElementById('analyticsChart').getContext('2d');
-
-    // If a chart already exists, destroy it before creating a new one
     if (myChart) {
         myChart.destroy();
     }
 
     myChart = new Chart(ctx, {
-        type: 'bar', // You can change this to 'line' if you prefer
+        type: 'bar', 
         data: {
             labels: labels,
             datasets: [{
@@ -1324,21 +1239,16 @@ function renderChart(labels, data, title) {
         }
     });
 }
-/**
- * 1. REAL-TIME CHART (Weekly/Monthly/Yearly)
- */
+
 function startRealtimeChart(range) {
   const now = new Date();
   let startDate = new Date();
 
   if (range === "weekly") {
-    // Look back 4 weeks
     startDate.setDate(now.getDate() - 28);
   } else if (range === "monthly") {
-    // Start from beginning of current year to show all months
     startDate.setMonth(0, 1);
   } else if (range === "yearly") {
-    // Look back 5 years
     startDate.setFullYear(now.getFullYear() - 5);
   }
   startDate.setHours(0, 0, 0, 0);
@@ -1359,17 +1269,14 @@ function startRealtimeChart(range) {
       let key = "";
       
       if (range === "weekly") {
-        // Formats as "Week of [Date]"
         const startOfWeek = new Date(date);
         startOfWeek.setDate(date.getDate() - date.getDay());
         key = "Week " + startOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       } 
       else if (range === "monthly") {
-        // Formats as "January", "February", etc.
         key = date.toLocaleDateString("en-US", { month: "long" });
       } 
       else if (range === "yearly") {
-        // Formats as "2025", "2026", etc.
         key = date.getFullYear().toString();
       }
 
@@ -1377,7 +1284,6 @@ function startRealtimeChart(range) {
       groupedData[key] += Math.abs(Number(data.change)) || 0;
     });
 
-    // Sort keys logically (optional but recommended for years/months)
     const sortedLabels = Object.keys(groupedData);
     const sortedValues = sortedLabels.map(label => groupedData[label]);
 
@@ -1387,112 +1293,9 @@ function startRealtimeChart(range) {
   activeListeners.push(unsubscribe);
 }
 
-/**
- * 2. PRODUCT MOVEMENT (TOTAL)
- */
-function loadProductMovement() {
-  const q = query(collection(db, "transactions"));
-
-  const unsubscribe = onSnapshot(q, snapshot => {
-    let grouped = {};
-    snapshot.forEach(doc => {
-      const d = doc.data();
-      if (!grouped[d.productName]) grouped[d.productName] = 0;
-      grouped[d.productName] += Number(d.change) || 0;
-    });
-
-    renderChart(Object.keys(grouped), Object.values(grouped), "Product Movement");
-  });
-
-  activeListeners.push(unsubscribe);
-}
-
-/**
- * 3. REVENUE & STAT CARDS
- */
-function loadRevenueAnalytics() {
-  const q = query(collection(db, "transactions"));
-
-  const unsubscribe = onSnapshot(q, snapshot => {
-    let sales = 0;           // Total value of stock used/sold (negative change)
-    let purchases = 0;       // Total value of stock bought (positive change)
-    let totalMovement = 0;
-    let productTotals = {};
-
-    snapshot.forEach(doc => {
-      const d = doc.data();
-      const changeVal = Number(d.change) || 0;
-      const totalVal = Number(d.totalValue) || 0;
-
-      // Logic for Sales vs. Purchases
-      if (changeVal < 0) {
-        // Stock going OUT (Usage/Sales)
-        sales += Math.abs(totalVal);
-      } else if (changeVal > 0) {
-        // Stock coming IN (Bought/Restocked)
-        purchases += Math.abs(totalVal);
-      }
-
-      // Movement: Total absolute volume of activity
-      totalMovement += Math.abs(changeVal);
-
-      // Tracking Top Product by total activity
-      if (d.productName) {
-        productTotals[d.productName] = (productTotals[d.productName] || 0) + Math.abs(changeVal);
-      }
-    });
-
-    // Update UI Elements
-    // Note: Make sure you have an element with id="expenseCard" in your HTML
-    document.getElementById("revenueCard").innerText = "₱" + sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
-    
-    const expenseEl = document.getElementById("expenseCard");
-    if (expenseEl) {
-      expenseEl.innerText = "₱" + purchases.toLocaleString(undefined, { minimumFractionDigits: 2 });
-    }
-
-    document.getElementById("movementCard").innerText = totalMovement.toFixed(2) + " KG";
-
-    const productKeys = Object.keys(productTotals);
-    const top = productKeys.sort((a, b) => productTotals[b] - productTotals[a])[0];
-    document.getElementById("topProductCard").innerText = top || "-";
-  });
-
-  activeListeners.push(unsubscribe);
-}
-/**
- * 4. INGREDIENT USAGE
- */
-function loadMostUsedIngredients() {
-  const q = query(
-    collection(db, "transactions"),
-    where("category", "==", "ingredient")
-  );
-
-  const unsubscribe = onSnapshot(q, snapshot => {
-    let usage = {};
-    snapshot.forEach(doc => {
-      const d = doc.data();
-      if (d.change < 0) {
-        if (!usage[d.productName]) usage[d.productName] = 0;
-        usage[d.productName] += Math.abs(Number(d.change));
-      }
-    });
-
-    renderChart(Object.keys(usage), Object.values(usage), "Most Used Ingredients");
-  });
-
-  activeListeners.push(unsubscribe);
-}
-
-/**
- * 5. MAIN UI RENDERER
- */
 window.showAnalytics = function () {
-  // 1. Clean up old listeners to prevent memory leaks/bugs
   clearActiveListeners();
 
-  // 2. Set up the HTML Layout
   document.getElementById("main").innerHTML = `
     <div class="container mt-4">
       <h3>Inventory Analytics</h3>
@@ -1541,11 +1344,9 @@ window.showAnalytics = function () {
     </div>
   `;
 
-  // 3. Initialize Listeners
   loadRevenueAnalytics();
-  startRealtimeChart("weekly"); // Default view
+  startRealtimeChart("weekly"); 
 
-  // 4. Attach Events
  document.getElementById("exportPDF").addEventListener("click", () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -1553,9 +1354,8 @@ window.showAnalytics = function () {
   const timestamp = now.toLocaleString();
   const fileDate = now.toISOString().split('T')[0];
 
-  // Title & Header
   doc.setFontSize(22);
-  doc.setTextColor(214, 139, 0); // Mango Orange
+  doc.setTextColor(214, 139, 0); 
   doc.text("Double'd Brew Inventory Report", 20, 20);
   
   doc.setFontSize(10);
@@ -1563,7 +1363,6 @@ window.showAnalytics = function () {
   doc.text(`Generated on: ${timestamp}`, 20, 30);
   doc.line(20, 35, 190, 35);
 
-  // Statistics
   doc.setFontSize(14);
   doc.setTextColor(0);
   doc.text("Summary Metrics:", 20, 45);
@@ -1572,16 +1371,13 @@ window.showAnalytics = function () {
   doc.text(`- Total Movement: ${document.getElementById("movementCard").innerText}`, 25, 65);
   doc.text(`- Top Performing Product: ${document.getElementById("topProductCard").innerText}`, 25, 75);
 
-  // Capture the Chart
   const chartCanvas = document.getElementById('analyticsChart');
   if (chartCanvas) {
     const chartImage = chartCanvas.toDataURL("image/png", 1.0);
     doc.text("Visual Analytics:", 20, 90);
-    // addImage(image, format, x, y, width, height)
     doc.addImage(chartImage, 'PNG', 15, 95, 180, 90);
   }
 
-  // Save with timestamp in filename
   doc.save(`DoubleD'Brew_Report_${fileDate}.pdf`);
 });
 
@@ -1596,26 +1392,71 @@ window.showAnalytics = function () {
     showDashboard(); 
   });
 };
+
+function loadRevenueAnalytics() {
+  const q = query(collection(db, "transactions"));
+
+  const unsubscribe = onSnapshot(q, snapshot => {
+    let sales = 0;           
+    let purchases = 0;       
+    let totalMovement = 0;
+    let productTotals = {};
+
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      const changeVal = Number(d.change) || 0;
+      const totalVal = Number(d.totalValue) || 0;
+
+      if (changeVal < 0) {
+        sales += Math.abs(totalVal);
+      } else if (changeVal > 0) {
+        purchases += Math.abs(totalVal);
+      }
+
+      totalMovement += Math.abs(changeVal);
+
+      if (d.productName) {
+        productTotals[d.productName] = (productTotals[d.productName] || 0) + Math.abs(changeVal);
+      }
+    });
+
+    const revCard = document.getElementById("revenueCard");
+    if(revCard) revCard.innerText = "₱" + sales.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    
+    const expenseEl = document.getElementById("expenseCard");
+    if (expenseEl) {
+      expenseEl.innerText = "₱" + purchases.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    }
+
+    const moveCard = document.getElementById("movementCard");
+    if(moveCard) moveCard.innerText = totalMovement.toFixed(2) + " KG";
+
+    const topCard = document.getElementById("topProductCard");
+    if(topCard) {
+      const productKeys = Object.keys(productTotals);
+      const top = productKeys.sort((a, b) => productTotals[b] - productTotals[a])[0];
+      topCard.innerText = top || "-";
+    }
+  });
+
+  activeListeners.push(unsubscribe);
+}
 	
-	
-// FOR MANGO ANIMATION BUTTON OFF AND
-let mangoAnimationOn = true; // default is ON
+let mangoAnimationOn = true; 
 
 window.toggleAnimation = function() {
-  mangoAnimationOn = !mangoAnimationOn; // switch state
+  mangoAnimationOn = !mangoAnimationOn; 
 
   const slices = document.querySelectorAll('#app .mango-slice');
   slices.forEach(slice => {
-if (mangoAnimationOn) {
-  slice.style.display = 'block';
-  slice.style.animationPlayState = 'running'; // run animation
-} else {
-  slice.style.display = 'none'; // hide slice completely
-}
-
+    if (mangoAnimationOn) {
+      slice.style.display = 'block';
+      slice.style.animationPlayState = 'running'; 
+    } else {
+      slice.style.display = 'none'; 
+    }
   });
 
-  // Update button text
   const btn = document.getElementById('toggleAnimationBtn');
   if (btn) {
     btn.textContent = mangoAnimationOn 
@@ -1624,8 +1465,6 @@ if (mangoAnimationOn) {
   }
 };
 
-
-// LOW STOCK
 window.showLowStock = function () {
   const lowStock = products.filter(p => (p.stock || 0) <= 3);
   if (lowStock.length === 0) {
@@ -1662,11 +1501,8 @@ window.showLowStock = function () {
   `;
 };
 
-// Export XLSX
 window.exportXLSX = function () {
-
     let previousData = JSON.parse(localStorage.getItem("previous_inventory") || "{}");
-
     let sheetData = [
         [
             "SKU", "Name", "Description", "Category", "Quantity", "Unit", "Quantity_Value",
@@ -1675,16 +1511,13 @@ window.exportXLSX = function () {
     ];
 
     products.forEach(p => {
-
         let newStock = Number(p.stock);
         let oldStock = previousData[p.sku]?.stock;
-
         let changeText = "— NEW ITEM";
         let diffValue = 0;
 
         if (typeof oldStock === "number") {
             diffValue = newStock - oldStock;
-
             if (diffValue > 0) {
                 changeText = `+${diffValue} ↑ INCREASE`;
             } else if (diffValue < 0) {
@@ -1694,11 +1527,7 @@ window.exportXLSX = function () {
             }
         }
 
-        const pieces =
-            p.category?.toLowerCase() === "utensil"
-                ? newStock * 100
-                : "";
-
+        const pieces = p.category?.toLowerCase() === "utensil" ? newStock * 100 : "";
         let totalValue = newStock * Number(p.price || 0);
 
         sheetData.push([
@@ -1712,7 +1541,7 @@ window.exportXLSX = function () {
             p.price || 0,
             typeof oldStock === "number" ? oldStock : "",
             newStock,
-            changeText, // ⭐ CLEAR INDICATOR
+            changeText, 
             totalValue,
             pieces
         ]);
@@ -1720,13 +1549,11 @@ window.exportXLSX = function () {
 
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.aoa_to_sheet(sheetData);
-
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
 
     const today = new Date().toISOString().split("T")[0];
     XLSX.writeFile(wb, `inventory (${today}).xlsx`);
 
-    // Save snapshot
     let snapshot = {};
     products.forEach(p => {
         snapshot[p.sku] = { stock: Number(p.stock) };
@@ -1734,7 +1561,7 @@ window.exportXLSX = function () {
     localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
 };
 
-// 🍿 WATCH PARTY JAVASCRIPT STATE CONTROLLER
+// 🍿 WATCH PARTY LOGIC CONTROLLER FIXED
 const wpDashboard = document.getElementById('watchPartyDashboard');
 const wpWelcomeGate = document.getElementById('wpWelcomeGate');
 const wpTheaterPanel = document.getElementById('wpTheaterPanel');
@@ -1748,6 +1575,7 @@ window.openWatchParty = function() {
   wpTheaterPanel.classList.add('wp-hidden-stage');
 };
 
+// Fixed scope connection configuration here
 document.getElementById('btnEnterTheater').addEventListener('click', () => {
   wpWelcomeGate.style.opacity = '0';
   wpWelcomeGate.style.pointerEvents = 'none';
@@ -1759,12 +1587,11 @@ document.getElementById('btnEnterTheater').addEventListener('click', () => {
 });
 
 document.getElementById('btnCloseParty').addEventListener('click', () => {
-  wpPlayer.pause();
+  if (wpPlayer) wpPlayer.pause();
   wpDashboard.classList.add('wp-hidden');
 });
 
 function loadSharedMovies() {
-  // Update these URLs with your actual direct video links or cloud reference objects!
   const sharedMoviesCollection = [
     { id: "1", title: "Our First Movie Night", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
     { id: "2", title: "Leigh's Favorite Film", url: "https://www.w3schools.com/html/movie.mp4" }
@@ -1787,14 +1614,12 @@ function loadSharedMovies() {
   });
 }
 
-// Auto Login
 if (localStorage.getItem("loggedIn") === "true") {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadProducts();
 }
 </script>
-  <!-- BootStrapJS (para sa adjust)-->
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
 </body>
