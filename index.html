@@ -302,7 +302,7 @@ body {
 </div>
 
 <!-- APP -->
-<div id="app">
+<div id="app" style="display: none;">
   <div class="mango-slice"></div>
   <div class="mango-slice"></div>
   <div class="mango-slice"></div>
@@ -311,7 +311,7 @@ body {
   
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">Double'd Brew Inventory</a>
+      <a class="navbar-brand" href="#" onclick="routeTo('dashboard')">Double'd Brew Inventory</a>
 
       <div class="d-flex ms-auto">
 
@@ -401,12 +401,29 @@ let sortMode = "";
 let searchQuery = ""; 
 let mainDashboardUnsubscribe = null;
 
+// Routing router logic to persist screens over reload
+window.routeTo = function(viewName) {
+  localStorage.setItem("currentView", viewName);
+  
+  if (viewName === "watchparty") {
+    openWatchParty();
+  } else if (viewName === "analytics") {
+    showAnalytics();
+  } else {
+    // default back to main dashboard
+    const wpDashboard = document.getElementById('watchPartyDashboard');
+    if (wpDashboard) wpDashboard.classList.add('wp-hidden');
+    showDashboard();
+  }
+};
+
 window.login = function () {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
   if (email === "admin" && password === "mango") {
     localStorage.setItem("loggedIn", "true");
+    localStorage.setItem("currentView", "dashboard");
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("welcomePage").style.display = "block";
 
@@ -424,6 +441,7 @@ window.logout = function () {
     mainDashboardUnsubscribe = null;
   }
   localStorage.removeItem("loggedIn");
+  localStorage.removeItem("currentView");
   document.getElementById("app").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
 };
@@ -439,14 +457,19 @@ function setupRealtimeProducts() {
   if (mainDashboardUnsubscribe) return;
 
   const q = collection(db, "products");
+  
+  // Explicit base initial view kick before network returns to solve blank screen bug
+  const savedView = localStorage.getItem("currentView") || "dashboard";
+  window.routeTo(savedView);
+
   mainDashboardUnsubscribe = onSnapshot(q, (snapshot) => {
     products = [];
     snapshot.forEach((docu) => {
       products.push({ id: docu.id, ...docu.data() });
     });
     
-    const isMainDashboardActive = document.getElementById("productTableBody") !== null;
-    if (isMainDashboardActive) {
+    // Auto re-render active list targets if we are on the active dashboard screen
+    if (localStorage.getItem("currentView") === "dashboard") {
       showDashboard();
     }
   }, (error) => {
@@ -542,7 +565,7 @@ window.addProduct = function () {
       
       <div class="mt-3">
         <button class="btn btn-primary">Save Product</button>
-        <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+        <button type="button" class="btn btn-secondary ms-2" onclick="routeTo('dashboard')">Cancel</button>
       </div>
     </form>
   `;
@@ -615,7 +638,7 @@ async function saveNewProduct(e) {
     });
 
     alert("✅ New product added!");
-    showDashboard();
+    routeTo('dashboard');
   } catch (error) {
     console.error("Error adding product:", error);
     alert("❌ Failed to save product to database.");
@@ -680,7 +703,7 @@ window.editProduct = function (id) {
       
       <div class="mt-3">
         <button class="btn btn-primary">Update Product</button>
-        <button type="button" class="btn btn-secondary ms-2" onclick="showDashboard()">Cancel</button>
+        <button type="button" class="btn btn-secondary ms-2" onclick="routeTo('dashboard')">Cancel</button>
       </div>
     </form>
   `;
@@ -766,7 +789,7 @@ async function updateProduct(e) {
     });
 
     alert("✅ Product updated successfully!");
-    showDashboard();
+    routeTo('dashboard');
   } catch (error) {
     console.error("Update failed:", error);
     alert("❌ Failed to update database.");
@@ -958,7 +981,7 @@ function applyFiltersAndRender() {
   }
 
   if (sortMode === "az") list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-  if (sortMode === "za") list.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
+  if (sortMode === "za") list.sort((a, b) => (b.name ?? '').localeCompare(b.name ?? ''));
   if (sortMode === "stockLowHigh") list.sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
   if (sortMode === "stockHighLow") list.sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
 
@@ -969,6 +992,11 @@ function applyFiltersAndRender() {
 function renderTable(list) {
   const tbody = document.getElementById("productTableBody");
   if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3">No products found. Add items to get started!</td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = list.map(p => {
     const price = (typeof p.price === 'number') ? p.price : 0;
@@ -1122,14 +1150,14 @@ window.showDashboard = function () {
   document.getElementById("main").innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inventory Dashboard</h4>
-        <div class="d-flex align-items-center">
-            <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('all')">All</button>
-            <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('ingredient')">Ingredients</button>
-            <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
-            <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
-            <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
-            <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
-            <button class="btn btn-danger" onclick="openWatchParty()">🍿 Watch Party</button>
+        <div class="d-flex align-items-center text-nowrap flex-wrap gap-2">
+            <button class="btn ${currentCategory==='all'?'btn-dark':'btn-secondary'}" onclick="selectCategory('all')">All</button>
+            <button class="btn ${currentCategory==='ingredient'?'btn-dark':'btn-secondary'}" onclick="selectCategory('ingredient')">Ingredients</button>
+            <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'}" onclick="selectCategory('utensil')">Utensils</button>
+            <button class="btn btn-warning" onclick="showLowStock()">⚠️ Low Stock</button>
+            <button class="btn btn-primary" onclick="addProduct()">➕ Add Product</button>
+            <button class="btn btn-info text-white" onclick="routeTo('analytics')">📊 Analytics</button>
+            <button class="btn btn-danger" onclick="routeTo('watchparty')">🍿 Watch Party</button>
         </div>
     </div>
 
@@ -1375,7 +1403,7 @@ window.showAnalytics = function () {
           <button class="btn btn-outline-danger chart-btn" data-range="yearly">Yearly</button>
           <button id="exportPDF" class="btn btn-dark ms-2">Export PDF</button>
         </div>
-        <button class="btn btn-secondary" id="backDashboard">⬅ Back</button>
+        <button class="btn btn-secondary" onclick="routeTo('dashboard')">⬅ Back</button>
       </div>
 
       <div class="row mb-4">
@@ -1453,11 +1481,6 @@ window.showAnalytics = function () {
       startRealtimeChart(btn.dataset.range);
     });
   });
-
-  document.getElementById("backDashboard").addEventListener("click", () => {
-    clearActiveListeners();
-    showDashboard(); 
-  });
 };
 	
 // MANGO ANIMATION CONTROL
@@ -1506,7 +1529,7 @@ window.showLowStock = function () {
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4>⚠️ Low Stock Products</h4>
       <div>
-        <button class="btn btn-secondary me-2" onclick="showDashboard()">⬅️ Back</button>
+        <button class="btn btn-secondary me-2" onclick="routeTo('dashboard')">⬅️ Back</button>
         <button class="btn btn-primary" onclick="exportXLSX()">⬇️ Export XLSX</button>
       </div>
     </div>
@@ -1582,6 +1605,7 @@ const wpPlayer = document.getElementById('wpSharedPlayer');
 const movieGrid = document.getElementById('movieUploadList');
 
 window.openWatchParty = function() {
+  if (!wpDashboard) return;
   wpDashboard.classList.remove('wp-hidden');
   wpWelcomeGate.style.opacity = '1';
   wpWelcomeGate.style.pointerEvents = 'auto';
@@ -1600,7 +1624,7 @@ document.getElementById('btnEnterTheater').addEventListener('click', () => {
 
 document.getElementById('btnCloseParty').addEventListener('click', () => {
   wpPlayer.pause();
-  wpDashboard.classList.add('wp-hidden');
+  routeTo('dashboard');
 });
 
 function loadSharedMovies() {
