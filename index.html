@@ -181,7 +181,84 @@ body {
   100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
 }
 
+/* 🍿 WATCH PARTY CINEMATIC STYLING ENGINE */
+#watchPartyDashboard {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 9999; background: #0b0c10;
+  color: #fff; font-family: 'Poppins', sans-serif;
+}
+.wp-hidden { display: none !important; }
+.wp-hidden-stage { opacity: 0; pointer-events: none; transform: scale(0.95); }
 
+/* Stage 1 Presentation Wrapper */
+.wp-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2; transition: opacity 0.8s ease;
+}
+.wp-bg-blur {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  filter: brightness(0.4) contrast(1.1);
+  transform: scale(1.05);
+}
+.wp-gate-content {
+  position: relative; text-align: center; z-index: 3;
+}
+.wp-greeting {
+  font-size: 3.5rem; font-weight: 700; color: #fff;
+  text-shadow: 0px 4px 15px rgba(255, 75, 110, 0.6);
+  margin-bottom: 2rem; animation: heartbeat 2.5s infinite alternate;
+}
+.wp-btn-enter {
+  background: linear-gradient(45deg, #ff4b6e, #ff758c);
+  border: none; padding: 12px 35px; border-radius: 50px;
+  color: white; font-size: 1.1rem; cursor: pointer; font-weight: 600;
+  box-shadow: 0 5px 15px rgba(255, 75, 110, 0.4);
+  transition: all 0.3s ease;
+}
+.wp-btn-enter:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(255, 75, 110, 0.6); }
+
+/* Stage 2 Content Theater Layout */
+.wp-content-panel {
+  position: absolute; inset: 0; padding: 30px;
+  display: flex; flex-direction: column; overflow-y: auto;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #0b0c10;
+}
+.wp-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px;
+}
+.wp-player-container {
+  position: relative; width: 100%; max-width: 900px;
+  margin: 20px auto; background: #000; border-radius: 12px; overflow: hidden;
+  border: 2px solid #ff4b6e;
+}
+#wpSharedPlayer { width: 100%; display: block; aspect-ratio: 16/9; }
+.sync-badge {
+  position: absolute; top: 15px; left: 15px; background: rgba(255, 75, 110, 0.8);
+  padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;
+}
+.wp-movie-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px; max-width: 900px; margin: 0 auto; width: 100%; padding-top: 10px;
+}
+.movie-card {
+  background: #1f2833; border: 1px solid #ff4b6e; border-radius: 8px;
+  padding: 20px; cursor: pointer; text-align: center; transition: all 0.2s;
+}
+.movie-card:hover { background: #ff4b6e; color: #fff; font-weight: bold; transform: translateY(-2px); }
+.wp-btn-close {
+  background: #333; color: #fff; border: none; padding: 8px 20px; border-radius: 5px;
+}
+.wp-btn-close:hover { background: #444; }
+
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.03); }
+}
   </style>
 </head>
 
@@ -269,6 +346,38 @@ body {
   </nav>
 
   <div class="container py-4" id="main"></div>
+</div>
+
+<!-- 🍿 WATCH PARTY LAYER COMPONENTS -->
+<div id="watchPartyDashboard" class="wp-hidden">
+  <!-- STAGE 1: Welcome Greeting Gate -->
+  <div id="wpWelcomeGate" class="wp-overlay">
+    <!-- Replace 'assets/img/couple-photo.jpg' with your actual image path or online link -->
+    <div class="wp-bg-blur" style="background-image: url('assets/img/couple-photo.jpg');"></div>
+    <div class="wp-gate-content">
+      <h1 class="wp-greeting">I Love You Leigh</h1>
+      <button id="btnEnterTheater" class="wp-btn-enter">✨ Enter Movie Night</button>
+    </div>
+  </div>
+
+  <!-- STAGE 2: Shared Streaming Theater -->
+  <div id="wpTheaterPanel" class="wp-content-panel wp-hidden-stage">
+    <div class="wp-header">
+      <h2>🎬 Double-D-Brew Cinema Room</h2>
+      <button id="btnCloseParty" class="wp-btn-close">Back to Inventory</button>
+    </div>
+
+    <div class="wp-player-container">
+      <video id="wpSharedPlayer" controls>
+        <source src="" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <div id="syncIndicator" class="sync-badge">🔴 Live Syncing Active</div>
+    </div>
+
+    <h3>🍿 Our Uploaded Movie Vault</h3>
+    <div id="movieUploadList" class="wp-movie-grid"></div>
+  </div>
 </div>
 
 <script type="module">
@@ -1069,7 +1178,8 @@ window.showDashboard = function () {
             <button class="btn ${currentCategory==='utensil'?'btn-dark':'btn-secondary'} me-2" onclick="selectCategory('utensil')">Utensils</button>
             <button class="btn btn-warning me-2" onclick="showLowStock()">⚠️ Low Stock</button>
             <button class="btn btn-primary me-2" onclick="addProduct()">➕ Add Product</button>
-            <button class="btn btn-info" onclick="showAnalytics()">📊 Analytics</button>
+            <button class="btn btn-info me-2" onclick="showAnalytics()">📊 Analytics</button>
+            <button class="btn btn-danger" onclick="openWatchParty()">🍿 Watch Party</button>
         </div>
     </div>
 
@@ -1624,7 +1734,58 @@ window.exportXLSX = function () {
     localStorage.setItem("previous_inventory", JSON.stringify(snapshot));
 };
 
+// 🍿 WATCH PARTY JAVASCRIPT STATE CONTROLLER
+const wpDashboard = document.getElementById('watchPartyDashboard');
+const wpWelcomeGate = document.getElementById('wpWelcomeGate');
+const wpTheaterPanel = document.getElementById('wpTheaterPanel');
+const wpPlayer = document.getElementById('wpSharedPlayer');
+const movieGrid = document.getElementById('movieUploadList');
 
+window.openWatchParty = function() {
+  wpDashboard.classList.remove('wp-hidden');
+  wpWelcomeGate.style.opacity = '1';
+  wpWelcomeGate.style.pointerEvents = 'auto';
+  wpTheaterPanel.classList.add('wp-hidden-stage');
+};
+
+document.getElementById('btnEnterTheater').addEventListener('click', () => {
+  wpWelcomeGate.style.opacity = '0';
+  wpWelcomeGate.style.pointerEvents = 'none';
+  
+  setTimeout(() => {
+    wpTheaterPanel.classList.remove('wp-hidden-stage');
+    loadSharedMovies();
+  }, 400);
+});
+
+document.getElementById('btnCloseParty').addEventListener('click', () => {
+  wpPlayer.pause();
+  wpDashboard.classList.add('wp-hidden');
+});
+
+function loadSharedMovies() {
+  // Update these URLs with your actual direct video links or cloud reference objects!
+  const sharedMoviesCollection = [
+    { id: "1", title: "Our First Movie Night", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
+    { id: "2", title: "Leigh's Favorite Film", url: "https://www.w3schools.com/html/movie.mp4" }
+  ];
+
+  movieGrid.innerHTML = '';
+  
+  sharedMoviesCollection.forEach(movie => {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    card.innerHTML = `<h4>🎥 ${movie.title}</h4>`;
+    
+    card.addEventListener('click', () => {
+      wpPlayer.src = movie.url;
+      wpPlayer.play();
+      console.log(`Streaming loaded video resource file: ${movie.title}`);
+    });
+    
+    movieGrid.appendChild(card);
+  });
+}
 
 // Auto Login
 if (localStorage.getItem("loggedIn") === "true") {
